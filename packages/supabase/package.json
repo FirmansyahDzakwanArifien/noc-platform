@@ -1,0 +1,35 @@
+{
+  "name": "@noc/supabase",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./client": "./src/client.ts",
+    "./server": "./src/server.ts",
+    "./auth": "./src/auth.ts",
+    "./middleware": "./src/middleware.ts",
+    "./signout": "./src/signout.ts",
+    "./apps": "./src/apps.ts",
+    "./env": "./src/env.ts",
+    "./types": "./src/types.ts",
+    "./actions": "./src/actions.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "19.1.17",
+    "next": "15.5.27",
+    "react": "^19.1.1"
+  },
+  "peerDependencies": {
+    "next": "^15.5.0",
+    "react": "^19.0.0"
+  }
+}

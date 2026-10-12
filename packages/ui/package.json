@@ -1,0 +1,30 @@
+{
+  "name": "@noc/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./app-shell": "./src/components/app-shell.tsx",
+    "./theme.css": "./theme.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@noc/supabase": "*",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.55.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.17",
+    "@types/react-dom": "19.1.9",
+    "next": "15.5.27",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "peerDependencies": {
+    "next": "^15.5.0",
+    "react": "^19.0.0"
+  }
+}
