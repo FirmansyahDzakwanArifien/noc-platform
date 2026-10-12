@@ -218,7 +218,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
                 <table className="border-separate border-spacing-0 text-xs">
                   <thead className="sticky top-0 z-20">
                     <tr>
-                      <th className="sticky left-0 z-30 min-w-40 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-left font-medium text-slate-500">
+                      <th className="sticky left-0 z-30 min-w-28 sm:min-w-40 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-left font-medium text-slate-500">
                         Nama
                       </th>
                       {days.map((d) => (

@@ -183,7 +183,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl bg-slate-950 p-6 text-white shadow-xl sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-xl sm:p-8">
         <div className="absolute -right-16 -top-24 size-72 rounded-full bg-brand-600/40 blur-3xl" aria-hidden />
         <div className="absolute -bottom-32 left-1/3 size-72 rounded-full bg-brand-900/50 blur-3xl" aria-hidden />
         <svg viewBox="0 0 600 80" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-20 w-full opacity-40" aria-hidden>
@@ -200,7 +200,7 @@ export default async function DashboardPage() {
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="animate-fade-up">
             <p className="text-sm text-slate-400">{greeting()},</p>
-            <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{firstName} 👋</h1>
+            <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-4xl">{firstName} 👋</h1>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
               {todayShift ? (
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 backdrop-blur">
@@ -225,12 +225,12 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="animate-fade-up text-left lg:text-right [animation-delay:120ms]">
-            <LiveClock showDate className="font-display text-4xl font-bold tracking-tight sm:text-5xl" />
+            <LiveClock showDate className="font-display text-3xl font-bold tracking-tight sm:text-5xl" />
           </div>
         </div>
 
         {actions.length > 0 && (
-          <div className="relative mt-6 flex flex-wrap gap-2">
+          <div className="relative mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             {actions.map((a) => (
               <a
                 key={a.label}

@@ -157,7 +157,7 @@ export default async function TeamCalendarPage({ searchParams }: { searchParams:
             <table className="border-separate border-spacing-0 text-xs">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 min-w-36 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-left font-medium text-slate-500">
+                  <th className="sticky left-0 z-20 min-w-28 sm:min-w-36 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-left font-medium text-slate-500">
                     Nama
                   </th>
                   {days.map((d) => (
