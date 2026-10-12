@@ -6,7 +6,7 @@ import { INCIDENT_STATUSES, isOneOf, PRIORITIES } from "@/lib/constants";
 import { wibToIso } from "@/lib/util";
 
 export async function createIncident(formData: FormData) {
-  const back = "/incident";
+  const back = "/incident/baru";
   const { supabase, auth } = await actionContext(back, "incident.manage");
   const severity = str(formData, "severity") ?? "medium";
   if (!isOneOf(PRIORITIES, severity)) fail(back, "Severity tidak valid.");
@@ -30,8 +30,8 @@ export async function createIncident(formData: FormData) {
     .select("id")
     .single();
   if (error || !data) fail(back, dbError(error));
-  revalidatePath(back);
-  done(`/incident/${(data as { id: string }).id}`, "Incident dibuat.");
+  revalidatePath("/incident");
+  done(`/incident/${(data as { id: string }).id}`, "Incident dicatat. Tambahkan perkembangan penanganan di timeline.");
 }
 
 /** Status baru → nilai resolved_at yang sesuai. */

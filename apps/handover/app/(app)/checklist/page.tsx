@@ -40,7 +40,7 @@ export default async function ChecklistTemplatesPage({
 
   const supabase = await createClient();
   const [{ data }, { data: itemRows }, sites] = await Promise.all([
-    supabase.from("checklist_templates").select("*").order("name"),
+    supabase.from("checklist_templates").select("id, name, site_id, is_active").order("name"),
     supabase.from("checklist_template_items").select("template_id"),
     loadSites(supabase),
   ]);
@@ -50,19 +50,25 @@ export default async function ChecklistTemplatesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Template Checklist" description="Checklist yang diisi saat serah terima shift (suhu, UPS, genset, link, dll)." />
+      <PageHeader
+        title="Template Checklist"
+        description="Atur daftar pemeriksaan (suhu, UPS, genset, link, dll.) yang diisi petugas di setiap handover."
+      />
       <Flash searchParams={sp} />
 
       <Card>
         <CardHeader>
-          <CardTitle>Template baru</CardTitle>
+          <div>
+            <CardTitle>Template baru</CardTitle>
+            <p className="mt-0.5 text-xs text-slate-500">Setelah dibuat, Anda akan diarahkan untuk menambahkan item pemeriksaan.</p>
+          </div>
         </CardHeader>
         <CardContent>
           <form action={createTemplate} className="grid gap-3 sm:grid-cols-[1fr_16rem_auto] sm:items-end">
             <Field label="Nama template" required>
               <Input name="name" required placeholder="mis. Checklist Ruang Server" />
             </Field>
-            <Field label="Site">
+            <Field label="Berlaku untuk site">
               <Select name="site_id" defaultValue="">
                 <option value="">— Umum (semua site) —</option>
                 {sites.active.map((s) => (
@@ -72,21 +78,24 @@ export default async function ChecklistTemplatesPage({
                 ))}
               </Select>
             </Field>
-            <SubmitButton>Buat template</SubmitButton>
+            <SubmitButton pendingText="Membuat…">Buat template</SubmitButton>
           </form>
         </CardContent>
       </Card>
 
       {templates.length === 0 ? (
-        <EmptyState title="Belum ada template" />
+        <EmptyState
+          title="Belum ada template checklist"
+          description="Tanpa template, bagian checklist di halaman handover akan kosong. Buat template pertama lewat formulir di atas."
+        />
       ) : (
         <Card>
           <Table>
             <THead>
               <TR>
                 <TH>Nama</TH>
-                <TH>Site</TH>
-                <TH>Jumlah item</TH>
+                <TH className="hidden sm:table-cell">Site</TH>
+                <TH className="hidden sm:table-cell">Jumlah item</TH>
                 <TH>Status</TH>
                 <TH className="text-right">Aksi</TH>
               </TR>
@@ -98,9 +107,13 @@ export default async function ChecklistTemplatesPage({
                     <Link href={`/checklist/${t.id}`} className="font-medium text-brand-600 hover:underline">
                       {t.name}
                     </Link>
+                    <p className="text-xs text-slate-500 sm:hidden">
+                      {sites.name(t.site_id)} · {counts.get(t.id) ?? 0} item
+                    </p>
+                    {(counts.get(t.id) ?? 0) === 0 && <p className="text-xs text-amber-700">Belum ada item — klik untuk menambahkan.</p>}
                   </TD>
-                  <TD>{sites.name(t.site_id)}</TD>
-                  <TD className="tabular-nums">{counts.get(t.id) ?? 0}</TD>
+                  <TD className="hidden sm:table-cell">{sites.name(t.site_id)}</TD>
+                  <TD className="hidden tabular-nums sm:table-cell">{counts.get(t.id) ?? 0}</TD>
                   <TD>
                     <Badge tone={t.is_active ? "green" : "gray"}>{t.is_active ? "Aktif" : "Nonaktif"}</Badge>
                   </TD>

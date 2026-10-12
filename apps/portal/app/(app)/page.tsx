@@ -171,7 +171,7 @@ export default async function DashboardPage() {
 
   const actions = [
     { label: "Buat handover", href: `${appUrl("handover")}/baru`, icon: ClipboardPlus, perm: "handover.create" },
-    { label: "Lapor incident", href: `${appUrl("handover")}/incident`, icon: Siren, perm: "incident.manage" },
+    { label: "Lapor incident", href: `${appUrl("handover")}/incident/baru`, icon: Siren, perm: "incident.manage" },
     { label: "Ajukan izin kerja", href: `${appUrl("perizinan")}/baru`, icon: FilePlus2, perm: "permit.create" },
     { label: "Ajukan cuti", href: `${appUrl("perizinan")}/cuti/baru`, icon: CalendarClock, perm: "leave.request" },
     { label: "Kelola jadwal", href: `${appUrl("jadwal")}/kelola`, icon: CalendarDays, perm: "schedule.manage" },

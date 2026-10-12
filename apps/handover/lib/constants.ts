@@ -19,31 +19,31 @@ export const CATEGORIES: { value: HandoverCategory; label: string }[] = [
 export const categoryLabel = (c: string) => CATEGORIES.find((x) => x.value === c)?.label ?? c;
 
 export const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "critical", label: "Critical" },
+  { value: "low", label: "Rendah" },
+  { value: "medium", label: "Sedang" },
+  { value: "high", label: "Tinggi" },
+  { value: "critical", label: "Kritis" },
 ];
 
 export const ITEM_STATUSES: { value: ItemStatus; label: string }[] = [
-  { value: "open", label: "Open" },
+  { value: "open", label: "Terbuka" },
   { value: "in_progress", label: "Dikerjakan" },
-  { value: "resolved", label: "Resolved" },
-  { value: "closed", label: "Closed" },
+  { value: "resolved", label: "Teratasi" },
+  { value: "closed", label: "Ditutup" },
 ];
 
 export type IncidentStatus = "open" | "investigating" | "mitigated" | "resolved" | "closed";
 
 export const INCIDENT_STATUSES: { value: IncidentStatus; label: string }[] = [
-  { value: "open", label: "Open" },
+  { value: "open", label: "Terbuka" },
   { value: "investigating", label: "Investigasi" },
-  { value: "mitigated", label: "Mitigasi" },
-  { value: "resolved", label: "Resolved" },
-  { value: "closed", label: "Closed" },
+  { value: "mitigated", label: "Termitigasi" },
+  { value: "resolved", label: "Teratasi" },
+  { value: "closed", label: "Ditutup" },
 ];
 
 export const INPUT_TYPES = [
-  { value: "boolean", label: "Ya/Tidak" },
+  { value: "boolean", label: "Normal/Tidak normal" },
   { value: "number", label: "Angka" },
   { value: "text", label: "Teks" },
   { value: "select", label: "Pilihan" },
@@ -79,4 +79,19 @@ export type IncidentUpdate = {
   content: string;
   created_by: string;
   created_at: string;
+};
+
+/** Warna penanda severity (garis/titik) agar incident kritis langsung terlihat. */
+export const SEVERITY_COLOR: Record<string, string> = {
+  critical: "bg-red-600",
+  high: "bg-orange-500",
+  medium: "bg-blue-500",
+  low: "bg-slate-300",
+};
+
+export const SEVERITY_HINT: Record<string, string> = {
+  critical: "Layanan utama mati / banyak pelanggan terdampak",
+  high: "Gangguan signifikan, sebagian layanan terdampak",
+  medium: "Gangguan terbatas, ada solusi sementara",
+  low: "Dampak kecil / potensi gangguan",
 };

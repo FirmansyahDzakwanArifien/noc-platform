@@ -11,7 +11,6 @@ import {
   Forbidden,
   formatDateTime,
   PageHeader,
-  StatusBadge,
   Table,
   TBody,
   TD,
@@ -19,12 +18,13 @@ import {
   THead,
   TR,
 } from "@noc/ui";
+import { RiskBadge } from "@/components/risk-badge";
 import { PERMIT_TYPES } from "@/lib/labels";
 import { nameOf, profileNames, type SearchParams } from "@/lib/util";
 
-export const metadata = { title: "Approval Saya" };
+export const metadata = { title: "Persetujuan Saya" };
 
-type Row = PermitApproval & {
+type Row = Pick<PermitApproval, "id" | "permit_id" | "step"> & {
   permits:
     | (Pick<Permit, "id" | "permit_no" | "title" | "permit_type" | "status" | "start_at" | "end_at" | "requested_by" | "risk_level"> & {
         sites: { code: string; name: string } | null;
@@ -40,93 +40,125 @@ export default async function ApprovalPage({ searchParams }: { searchParams: Sea
 
   const { data, error } = await supabase
     .from("permit_approvals")
-    .select("*, permits(id, permit_no, title, permit_type, status, start_at, end_at, requested_by, risk_level, sites(code, name))")
+    .select("id, permit_id, step, permits(id, permit_no, title, permit_type, status, start_at, end_at, requested_by, risk_level, sites(code, name))")
     .eq("approver_id", auth.userId)
     .eq("decision", "pending")
-    .order("step");
-  const rows = ((data ?? []) as Row[])
-    .filter((r) => r.permits)
-    .sort((a, b) => (a.permits!.start_at < b.permits!.start_at ? -1 : 1));
+    .order("step")
+    .limit(200);
+  const rows = ((data ?? []) as unknown as Row[]).filter((r) => r.permits && ["submitted", "in_review"].includes(r.permits.status));
 
-  // Status step sebelumnya: apakah giliran saya?
+  // Status step sebelumnya (apakah giliran saya?) + nama pemohon — keduanya hanya bergantung pada rows.
   const permitIds = [...new Set(rows.map((r) => r.permit_id))];
-  const { data: stepRows } = permitIds.length
-    ? await supabase.from("permit_approvals").select("permit_id, step, decision").in("permit_id", permitIds)
-    : { data: [] };
-  const steps = (stepRows ?? []) as Pick<PermitApproval, "permit_id" | "step" | "decision">[];
-  const myTurn = (r: Row) =>
-    ["submitted", "in_review"].includes(r.permits!.status) &&
-    steps.every((s) => s.permit_id !== r.permit_id || s.step >= r.step || s.decision === "approved");
+  const [stepRes, names] = await Promise.all([
+    permitIds.length
+      ? supabase.from("permit_approvals").select("permit_id, step, decision").in("permit_id", permitIds)
+      : Promise.resolve({ data: [] }),
+    profileNames(supabase, rows.map((r) => r.permits?.requested_by)),
+  ]);
+  const steps = (stepRes.data ?? []) as Pick<PermitApproval, "permit_id" | "step" | "decision">[];
+  const myTurn = (r: Row) => steps.every((s) => s.permit_id !== r.permit_id || s.step >= r.step || s.decision === "approved");
 
-  const names = await profileNames(supabase, rows.map((r) => r.permits?.requested_by));
+  // Giliran saya dulu, lalu urut jadwal mulai terdekat.
+  const sorted = rows
+    .map((r) => ({ r, turn: myTurn(r) }))
+    .sort((a, b) => Number(b.turn) - Number(a.turn) || (a.r.permits!.start_at < b.r.permits!.start_at ? -1 : 1));
+  const turnCount = sorted.filter((x) => x.turn).length;
 
   return (
     <div>
-      <PageHeader title="Approval Saya" description="Langkah approval izin kerja yang menunggu keputusan Anda." />
+      <PageHeader
+        title="Persetujuan Saya"
+        description="Izin kerja yang menunggu keputusan Anda sebagai approver. Buka izin untuk meninjau lalu setujui atau tolak."
+      />
       <Flash searchParams={sp} />
       {error ? (
-        <EmptyState title="Gagal memuat data" description={error.message} />
-      ) : rows.length === 0 ? (
-        <EmptyState title="Tidak ada approval tertunda" description="Semua izin sudah Anda putuskan." />
+        <EmptyState title="Gagal memuat daftar persetujuan" description="Periksa koneksi Anda lalu muat ulang halaman." />
+      ) : sorted.length === 0 ? (
+        <EmptyState
+          title="Tidak ada izin yang menunggu keputusan Anda"
+          description="Izin akan muncul di sini saat pengelola izin menunjuk Anda sebagai approver."
+          action={
+            <Link href="/" className={buttonClass("secondary")}>
+              Lihat semua izin
+            </Link>
+          }
+        />
       ) : (
-        <Card>
-          <Table>
-            <THead>
-              <tr>
-                <TH>No</TH>
-                <TH>Judul</TH>
-                <TH>Jenis</TH>
-                <TH>Site</TH>
-                <TH>Periode</TH>
-                <TH>Pemohon</TH>
-                <TH>Step</TH>
-                <TH />
-              </tr>
-            </THead>
-            <TBody>
-              {rows.map((r) => {
-                const p = r.permits!;
-                const turn = myTurn(r);
-                return (
-                  <TR key={r.id}>
-                    <TD className="whitespace-nowrap font-mono text-xs">{p.permit_no ?? "-"}</TD>
-                    <TD>
-                      <Link href={`/${p.id}`} className="font-medium text-slate-900 hover:underline">
-                        {p.title}
-                      </Link>
-                      <div className="mt-1 flex gap-1">
-                        <StatusBadge status={p.status} />
-                        <StatusBadge status={p.risk_level} />
-                      </div>
-                    </TD>
-                    <TD className="whitespace-nowrap">{PERMIT_TYPES[p.permit_type] ?? p.permit_type}</TD>
-                    <TD className="whitespace-nowrap">{p.sites ? `${p.sites.code} · ${p.sites.name}` : "-"}</TD>
-                    <TD className="whitespace-nowrap text-xs">
-                      {formatDateTime(p.start_at)}
-                      <br />
-                      s/d {formatDateTime(p.end_at)}
-                    </TD>
-                    <TD className="whitespace-nowrap">{nameOf(names, p.requested_by, auth.userId)}</TD>
-                    <TD className="whitespace-nowrap">
-                      {r.step}
-                      {!turn && (
-                        <Badge tone="gray" className="ml-2">
-                          Menunggu step sebelumnya
-                        </Badge>
-                      )}
-                    </TD>
-                    <TD className="text-right">
-                      <Link href={`/${p.id}`} className={buttonClass(turn ? "primary" : "secondary", "sm")}>
-                        {turn ? "Tinjau & putuskan" : "Lihat"}
-                      </Link>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        </Card>
+        <>
+          <p className="mb-3 text-sm text-slate-600">
+            {turnCount > 0 ? (
+              <>
+                <b className="text-slate-900">{turnCount} izin</b> siap Anda putuskan sekarang.
+              </>
+            ) : (
+              "Belum ada yang bisa Anda putuskan — semua masih menunggu approver di langkah sebelumnya."
+            )}
+          </p>
+          <Card>
+            <Table>
+              <THead>
+                <tr>
+                  <TH>Izin</TH>
+                  <TH className="hidden lg:table-cell">Site</TH>
+                  <TH className="hidden sm:table-cell">Jadwal (WIB)</TH>
+                  <TH className="hidden md:table-cell">Pemohon</TH>
+                  <TH className="hidden sm:table-cell">Status</TH>
+                  <TH />
+                </tr>
+              </THead>
+              <TBody>
+                {sorted.map(({ r, turn }) => {
+                  const p = r.permits!;
+                  return (
+                    <TR key={r.id}>
+                      <TD>
+                        <Link href={`/${p.id}`} className="font-medium text-slate-900 hover:underline">
+                          {p.title}
+                        </Link>
+                        <span className="mt-0.5 block text-xs text-slate-500">
+                          {PERMIT_TYPES[p.permit_type] ?? p.permit_type}
+                          {p.permit_no ? ` · ${p.permit_no}` : ""}
+                          <span className="lg:hidden">{p.sites ? ` · ${p.sites.code}` : ""}</span>
+                        </span>
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          <RiskBadge level={p.risk_level} />
+                          <span className="sm:hidden">
+                            <TurnBadge turn={turn} step={r.step} />
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-500 sm:hidden">Mulai {formatDateTime(p.start_at)}</span>
+                      </TD>
+                      <TD className="hidden whitespace-nowrap lg:table-cell">{p.sites ? `${p.sites.code} · ${p.sites.name}` : "-"}</TD>
+                      <TD className="hidden whitespace-nowrap text-xs sm:table-cell">
+                        {formatDateTime(p.start_at)}
+                        <br />
+                        s/d {formatDateTime(p.end_at)}
+                      </TD>
+                      <TD className="hidden whitespace-nowrap md:table-cell">{nameOf(names, p.requested_by, auth.userId)}</TD>
+                      <TD className="hidden sm:table-cell">
+                        <TurnBadge turn={turn} step={r.step} />
+                      </TD>
+                      <TD className="text-right">
+                        <Link href={`/${p.id}#persetujuan`} className={buttonClass(turn ? "primary" : "secondary", "sm")}>
+                          {turn ? "Tinjau" : "Lihat"}
+                        </Link>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </Card>
+        </>
       )}
     </div>
+  );
+}
+
+function TurnBadge({ turn, step }: { turn: boolean; step: number }) {
+  return turn ? (
+    <Badge tone="yellow">Giliran Anda · langkah {step}</Badge>
+  ) : (
+    <Badge tone="gray">Menunggu langkah sebelumnya</Badge>
   );
 }

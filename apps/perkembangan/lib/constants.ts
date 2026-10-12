@@ -1,3 +1,4 @@
+import type { Tone } from "@noc/ui";
 import type { Priority, ProjectMember, ProjectStatus, TaskStatus } from "@noc/supabase/types";
 
 export const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
@@ -8,25 +9,25 @@ export const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "cancelled", label: "Dibatalkan" },
 ];
 
-export const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
-  { value: "todo", label: "To do" },
-  { value: "in_progress", label: "Dikerjakan" },
-  { value: "review", label: "Review" },
-  { value: "blocked", label: "Terhambat" },
-  { value: "done", label: "Selesai" },
+export const TASK_STATUSES: { value: TaskStatus; label: string; tone: Tone }[] = [
+  { value: "todo", label: "Belum mulai", tone: "gray" },
+  { value: "in_progress", label: "Dikerjakan", tone: "blue" },
+  { value: "review", label: "Ditinjau", tone: "purple" },
+  { value: "blocked", label: "Terhambat", tone: "red" },
+  { value: "done", label: "Selesai", tone: "green" },
 ];
 
-export const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "critical", label: "Critical" },
+export const PRIORITIES: { value: Priority; label: string; tone: Tone }[] = [
+  { value: "low", label: "Rendah", tone: "gray" },
+  { value: "medium", label: "Sedang", tone: "blue" },
+  { value: "high", label: "Tinggi", tone: "orange" },
+  { value: "critical", label: "Kritis", tone: "red" },
 ];
 
-export const MEMBER_ROLES: { value: ProjectMember["role"]; label: string }[] = [
-  { value: "lead", label: "Lead" },
-  { value: "member", label: "Member" },
-  { value: "reviewer", label: "Reviewer" },
+export const MEMBER_ROLES: { value: ProjectMember["role"]; label: string; hint: string }[] = [
+  { value: "lead", label: "Ketua", hint: "boleh mengubah project, task, dan anggota" },
+  { value: "member", label: "Anggota", hint: "mengerjakan task dan mengirim laporan" },
+  { value: "reviewer", label: "Peninjau", hint: "memantau dan meninjau hasil pekerjaan" },
 ];
 
 /** Saran kategori (input bebas, ditampilkan via <datalist>). */

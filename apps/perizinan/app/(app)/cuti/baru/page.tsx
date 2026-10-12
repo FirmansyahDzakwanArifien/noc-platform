@@ -21,11 +21,12 @@ import {
   Textarea,
   toDateInput,
 } from "@noc/ui";
-import { isLeaveType, LEAVE_TYPES } from "@/lib/labels";
+import { ArrowLeft } from "lucide-react";
+import { isLeaveType, LEAVE_HINTS, LEAVE_TYPES } from "@/lib/labels";
 import { first, type SearchParams } from "@/lib/util";
 import { createLeave } from "../actions";
 
-export const metadata = { title: "Ajukan Cuti / Izin" };
+export const metadata = { title: "Ajukan Cuti / Tukar Shift" };
 
 type MySchedule = {
   id: string;
@@ -72,26 +73,36 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Ajukan Cuti / Izin" description="Permintaan akan diteruskan ke atasan untuk disetujui." />
+      <Link href="/cuti" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+        <ArrowLeft className="size-4" aria-hidden /> Cuti & tukar shift
+      </Link>
+      <PageHeader
+        title={isSwap ? "Ajukan Tukar Shift" : `Ajukan ${LEAVE_TYPES[type]}`}
+        description={
+          isSwap
+            ? "Minta rekan menggantikan salah satu jadwal shift Anda. Rekan menyetujui dulu, lalu atasan memutuskan."
+            : "Permintaan dikirim ke atasan untuk disetujui. Status bisa dipantau di halaman Cuti & tukar shift."
+        }
+      />
       <Flash searchParams={sp} />
 
       <Card>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label>Jenis</Label>
-            <div className="flex flex-wrap gap-2" role="tablist">
+            <Label>Jenis permintaan</Label>
+            <div className="flex flex-wrap gap-2">
               {Object.entries(LEAVE_TYPES).map(([k, v]) => (
                 <Link
                   key={k}
                   href={`/cuti/baru?jenis=${k}`}
-                  role="tab"
-                  aria-selected={k === type}
+                  aria-current={k === type ? "page" : undefined}
                   className={cn(buttonClass(k === type ? "primary" : "secondary", "sm"))}
                 >
                   {v}
                 </Link>
               ))}
             </div>
+            <p className="text-xs text-slate-500">{LEAVE_HINTS[type]}</p>
           </div>
 
           <form action={createLeave} className="space-y-4">
@@ -99,10 +110,13 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
 
             {isSwap ? (
               schedules.length === 0 ? (
-                <Alert tone="warning">Anda tidak memiliki jadwal kerja mendatang yang bisa ditukar.</Alert>
+                <Alert tone="warning">
+                  Anda tidak memiliki jadwal kerja mendatang yang bisa ditukar. Pastikan jadwal Anda sudah tersedia di
+                  modul Jadwal.
+                </Alert>
               ) : (
                 <>
-                  <Field label="Jadwal yang ditukar" required hint="Tanggal permintaan mengikuti tanggal jadwal ini.">
+                  <Field label="Jadwal yang ingin digantikan" required hint="Hanya jadwal kerja Anda mulai hari ini.">
                     <Select name="swap_schedule_id" required defaultValue="">
                       <option value="" disabled>
                         Pilih jadwal…
@@ -115,7 +129,7 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Rekan pengganti" required hint="Rekan harus menyetujui sebelum atasan memutuskan.">
+                  <Field label="Rekan pengganti" required hint="Rekan akan melihat permintaan ini dan harus menyatakan bersedia.">
                     <Select name="swap_with" required defaultValue="">
                       <option value="" disabled>
                         Pilih rekan…
@@ -127,6 +141,11 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
                       ))}
                     </Select>
                   </Field>
+                  <ol className="grid gap-1 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 sm:grid-cols-3">
+                    <li>1. Anda kirim permintaan</li>
+                    <li>2. Rekan menyatakan bersedia</li>
+                    <li>3. Atasan menyetujui</li>
+                  </ol>
                 </>
               )
             ) : (
@@ -134,14 +153,19 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
                 <Field label="Tanggal mulai" required>
                   <Input type="date" name="start_date" required defaultValue={today} />
                 </Field>
-                <Field label="Tanggal selesai" required>
+                <Field label="Tanggal selesai" required hint="Sama dengan tanggal mulai bila hanya 1 hari.">
                   <Input type="date" name="end_date" required defaultValue={today} />
                 </Field>
               </div>
             )}
 
             <Field label="Alasan" required>
-              <Textarea name="reason" required rows={3} />
+              <Textarea
+                name="reason"
+                required
+                rows={3}
+                placeholder={isSwap ? "mis. Ada keperluan keluarga di tanggal tersebut." : "Jelaskan singkat alasan permintaan."}
+              />
             </Field>
 
             <div className="flex justify-end gap-2">

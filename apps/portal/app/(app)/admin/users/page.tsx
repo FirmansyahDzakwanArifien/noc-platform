@@ -38,7 +38,10 @@ export default async function UsersPage({
 
   return (
     <div>
-      <PageHeader title="User" description={`${rows.length} user terdaftar`} />
+      <PageHeader
+        title="User"
+        description={`${rows.length} user terdaftar. Role menentukan hak akses di semua aplikasi; Anda hanya bisa memberi role setara atau di bawah role Anda.`}
+      />
       <Flash searchParams={sp} />
 
       <form className="mb-4 flex gap-2" action="/admin/users">

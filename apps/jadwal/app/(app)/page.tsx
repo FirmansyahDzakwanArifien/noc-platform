@@ -3,7 +3,7 @@ import { appUrl } from "@noc/supabase/apps";
 import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
 import { buttonClass, Card, CardContent, cn, EmptyState, Flash, Forbidden, formatTime, PageHeader } from "@noc/ui";
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import {
   addMonths,
   dateRange,
@@ -34,18 +34,19 @@ type MySchedule = {
   end_time: string | null;
   color: string | null;
   is_working: boolean;
-  site_code: string | null;
   site_name: string | null;
   period_id: string;
-  period_name: string;
 };
+
+const COLS = "id, work_date, is_leader, note, shift_code, shift_name, start_time, end_time, color, is_working, site_name, period_id";
 
 type SP = Promise<{ bulan?: string; error?: string; success?: string }>;
 
 export default async function MySchedulePage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const auth = await requireAuth();
-  if (!auth.can("schedule.view") && !auth.can("schedule.manage")) return <Forbidden />;
+  const canManage = auth.can("schedule.manage");
+  if (!auth.can("schedule.view") && !canManage) return <Forbidden />;
 
   const today = todayWib();
   const month = isValidMonth(sp.bulan) ? sp.bulan : monthOf(today);
@@ -53,14 +54,37 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
   const last = monthEnd(month);
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("v_my_schedule")
-    .select("*")
-    .gte("work_date", first)
-    .lte("work_date", last)
-    .order("work_date")
-    .order("start_time", { nullsFirst: false });
-  const rows = (data as MySchedule[] | null) ?? [];
+  const [{ data, error }, { data: upcomingData }, { data: publishedData }] = await Promise.all([
+    supabase
+      .from("v_my_schedule")
+      .select(COLS)
+      .gte("work_date", first)
+      .lte("work_date", last)
+      .order("work_date")
+      .order("start_time", { nullsFirst: false }),
+    // Shift kerja terdekat mulai hari ini (untuk ringkasan di atas kalender).
+    supabase
+      .from("v_my_schedule")
+      .select(COLS)
+      .gte("work_date", today)
+      .eq("is_working", true)
+      .order("work_date")
+      .order("start_time")
+      .limit(10),
+    // Pengelola jadwal juga bisa membaca periode draft (RLS) → saring agar hanya yang dipublikasikan.
+    canManage
+      ? supabase
+          .from("schedule_periods")
+          .select("id")
+          .eq("status", "published")
+          .gte("end_date", first < today ? first : today)
+          .limit(100)
+      : Promise.resolve({ data: null }),
+  ]);
+  const published = publishedData ? new Set((publishedData as { id: string }[]).map((p) => p.id)) : null;
+  const visible = (r: MySchedule) => !published || published.has(r.period_id);
+  const rows = ((data as MySchedule[] | null) ?? []).filter(visible);
+  const next = ((upcomingData as MySchedule[] | null) ?? []).find(visible) ?? null;
 
   const byDate = new Map<string, MySchedule[]>();
   for (const r of rows) {
@@ -89,7 +113,7 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
     <div>
       <PageHeader
         title="Jadwal Saya"
-        description="Jadwal shift Anda dari periode yang sudah dipublikasikan."
+        description="Jadwal shift Anda per bulan, dari roster yang sudah dipublikasikan."
         actions={
           <a href={swapUrl} className={buttonClass("secondary")}>
             <ArrowLeftRight className="size-4" aria-hidden /> Ajukan tukar shift
@@ -97,6 +121,29 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
         }
       />
       <Flash searchParams={sp} />
+
+      {/* Ringkasan shift terdekat */}
+      <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <CalendarClock className="size-5 shrink-0 text-brand-600" aria-hidden />
+        {next ? (
+          <div className="min-w-0 text-sm">
+            <p className="text-xs text-slate-500">{next.work_date === today ? "Shift Anda hari ini" : "Shift berikutnya"}</p>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
+              <span>{next.work_date === today ? "Hari ini" : shortDate(next.work_date)}</span>
+              <span className="rounded px-1.5 py-0.5 text-xs font-semibold" style={shiftStyle(next.color)}>
+                {next.shift_code}
+              </span>
+              <span>
+                {next.shift_name} {formatTime(next.start_time)}–{formatTime(next.end_time)}
+              </span>
+              {next.site_name && <span className="font-normal text-slate-500">· {next.site_name}</span>}
+              {next.is_leader && <span className="text-xs font-normal text-amber-600">★ Leader</span>}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">Belum ada shift kerja terjadwal untuk Anda mulai hari ini.</p>
+        )}
+      </div>
 
       <Card>
         <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-3 sm:px-5">
@@ -112,7 +159,7 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
             <h2 className="text-base font-semibold text-slate-900">{monthLabel(month)}</h2>
             {month !== monthOf(today) && (
               <Link href="/" className="text-xs font-medium text-brand-600 hover:underline">
-                Bulan ini
+                Kembali ke bulan ini
               </Link>
             )}
           </div>
@@ -149,6 +196,7 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
                     "inline-grid size-6 place-items-center rounded-full text-xs",
                     isToday ? "bg-brand-600 font-semibold text-white" : isWeekend(d) ? "text-rose-500" : "text-slate-600",
                   )}
+                  aria-label={isToday ? "Hari ini" : undefined}
                 >
                   {dayNumber(d)}
                 </span>
@@ -158,7 +206,7 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
                       key={s.id}
                       className="truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight sm:px-1.5 sm:text-xs"
                       style={shiftStyle(s.color)}
-                      title={`${s.shift_name}${s.is_working ? ` ${formatTime(s.start_time)}–${formatTime(s.end_time)}` : ""}${s.site_name ? ` · ${s.site_name}` : ""}${s.is_leader ? " · Leader" : ""}`}
+                      title={`${s.shift_name}${s.is_working ? ` ${formatTime(s.start_time)}–${formatTime(s.end_time)}` : ""}${s.site_name ? ` · ${s.site_name}` : ""}${s.is_leader ? " · Leader" : ""}${s.note ? ` · ${s.note}` : ""}`}
                     >
                       {s.is_leader && <Star className="mr-0.5 inline size-2.5 fill-current align-[-1px]" aria-label="Leader" />}
                       <span className="sm:hidden">{s.shift_code}</span>
@@ -189,17 +237,30 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
                 {l.name} <span className="text-slate-400">×{l.count}</span>
               </span>
             ))}
-            <span className="ml-auto text-slate-500">{workDays} hari kerja</span>
+            <span className="inline-flex items-center gap-1">
+              <Star className="size-3 fill-amber-400 text-amber-500" aria-hidden /> Leader shift
+            </span>
+            <span className="ml-auto font-medium text-slate-700">{workDays} hari kerja bulan ini</span>
           </CardContent>
         )}
       </Card>
 
-      {/* Daftar ringkas untuk HP */}
-      <div className="mt-6 sm:hidden">
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">Daftar jadwal</h2>
-        {rows.length === 0 ? (
-          <EmptyState title="Belum ada jadwal" description="Tidak ada jadwal yang dipublikasikan untuk bulan ini." />
-        ) : (
+      {rows.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState
+            title={`Belum ada jadwal di ${monthLabel(month)}`}
+            description="Jadwal muncul di sini setelah roster bulan ini dipublikasikan oleh supervisor. Cek bulan lain atau lihat kalender tim."
+            action={
+              <Link href="/kalender" className={buttonClass("secondary")}>
+                Lihat Kalender Tim
+              </Link>
+            }
+          />
+        </div>
+      ) : (
+        /* Daftar ringkas untuk HP */
+        <div className="mt-6 sm:hidden">
+          <h2 className="mb-2 text-sm font-semibold text-slate-900">Daftar jadwal</h2>
           <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
             {rows.map((s) => (
               <li key={s.id} className={cn("flex items-center gap-3 px-4 py-2.5 text-sm", s.work_date === today && "bg-brand-50")}>
@@ -207,24 +268,25 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
                 <span className="w-10 shrink-0 rounded px-1.5 py-0.5 text-center text-xs font-semibold" style={shiftStyle(s.color)}>
                   {s.shift_code}
                 </span>
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium text-slate-900">{s.shift_name}</span>
-                  {s.is_working && (
-                    <span className="text-slate-500">
-                      {" "}
-                      {formatTime(s.start_time)}–{formatTime(s.end_time)}
-                    </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">
+                    <span className="font-medium text-slate-900">{s.shift_name}</span>
+                    {s.is_working && (
+                      <span className="text-slate-500">
+                        {" "}
+                        {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                      </span>
+                    )}
+                    {s.is_leader && <span className="ml-1 text-xs text-amber-600">★ Leader</span>}
+                  </span>
+                  {(s.site_name || s.note) && (
+                    <span className="block truncate text-xs text-slate-500">{[s.site_name, s.note].filter(Boolean).join(" · ")}</span>
                   )}
-                  {s.is_leader && <span className="ml-1 text-xs text-amber-600">★ Leader</span>}
                 </span>
               </li>
             ))}
           </ul>
-        )}
-      </div>
-
-      {rows.length === 0 && (
-        <p className="mt-4 hidden text-sm text-slate-500 sm:block">Tidak ada jadwal yang dipublikasikan untuk bulan ini.</p>
+        </div>
       )}
     </div>
   );

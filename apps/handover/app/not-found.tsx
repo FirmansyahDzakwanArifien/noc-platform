@@ -7,8 +7,9 @@ export default function NotFound() {
       <div>
         <p className="text-sm font-semibold text-brand-600">404</p>
         <h1 className="mt-1 text-xl font-semibold text-slate-900">Halaman tidak ditemukan</h1>
+        <p className="mt-1 max-w-sm text-sm text-slate-500">Data yang Anda cari tidak ada, sudah dihapus, atau tautannya salah.</p>
         <Link href="/" className={buttonClass("secondary", "md", "mt-4")}>
-          Kembali
+          Ke daftar handover
         </Link>
       </div>
     </div>

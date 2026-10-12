@@ -29,3 +29,30 @@ export function safeBack(v: string | null, fallback: string): string {
 export function isUuid(v: string | null | undefined): v is string {
   return !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
+
+type ShiftWindow = { id: string; start_time: string | null; end_time: string | null };
+
+/**
+ * Tebakan awal form handover: shift yang sedang berjalan (WIB) → shift berikutnya.
+ * Shift lintas hari (mis. Malam 23:00–07:00) setelah tengah malam memakai tanggal kemarin.
+ */
+export function guessHandoverShift(working: ShiftWindow[], now: Date = new Date()) {
+  const wib = now.toLocaleString("sv-SE", { timeZone: "Asia/Jakarta" }); // "2026-10-12 14:05:00"
+  const today = wib.slice(0, 10);
+  const time = wib.slice(11, 16);
+  for (let i = 0; i < working.length; i++) {
+    const s = working[i];
+    const start = s.start_time?.slice(0, 5);
+    const end = s.end_time?.slice(0, 5);
+    if (!start || !end) continue;
+    const overnight = end <= start;
+    const inShift = overnight ? time >= start || time < end : time >= start && time < end;
+    if (!inShift) continue;
+    return {
+      date: overnight && time < end ? addDays(today, -1) : today,
+      fromId: s.id,
+      toId: working.length > 1 ? working[(i + 1) % working.length].id : "",
+    };
+  }
+  return { date: today, fromId: "", toId: "" };
+}

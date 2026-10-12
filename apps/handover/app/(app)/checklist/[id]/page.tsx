@@ -6,7 +6,6 @@ import type { ChecklistTemplate, ChecklistTemplateItem } from "@noc/supabase/typ
 import {
   Badge,
   Button,
-  buttonClass,
   Card,
   CardContent,
   CardHeader,
@@ -26,6 +25,7 @@ import {
   TR,
 } from "@noc/ui";
 import { ArrowLeft, Trash2 } from "lucide-react";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { INPUT_TYPES } from "@/lib/constants";
 import { loadSites } from "@/lib/data";
 import { isUuid } from "@/lib/util";
@@ -48,7 +48,7 @@ export default async function ChecklistTemplateDetailPage({
 
   const supabase = await createClient();
   const [{ data: tpl }, { data: itemRows }, sites] = await Promise.all([
-    supabase.from("checklist_templates").select("*").eq("id", id).maybeSingle(),
+    supabase.from("checklist_templates").select("id, name, site_id, is_active").eq("id", id).maybeSingle(),
     supabase.from("checklist_template_items").select("*").eq("template_id", id).order("section", { nullsFirst: true }).order("sort_order"),
     loadSites(supabase),
   ]);
@@ -61,16 +61,23 @@ export default async function ChecklistTemplateDetailPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2">
-            {t.name}
-            <Badge tone={t.is_active ? "green" : "gray"}>{t.is_active ? "Aktif" : "Nonaktif"}</Badge>
-          </span>
-        }
-        description={`Site: ${sites.name(t.site_id)}`}
-        actions={
-          <>
+      <div>
+        <Link href="/checklist" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+          <ArrowLeft className="size-4" aria-hidden /> Semua template
+        </Link>
+        <PageHeader
+          title={
+            <span className="flex flex-wrap items-center gap-2">
+              {t.name}
+              <Badge tone={t.is_active ? "green" : "gray"}>{t.is_active ? "Aktif" : "Nonaktif"}</Badge>
+            </span>
+          }
+          description={
+            t.is_active
+              ? `Berlaku untuk: ${t.site_id ? `site ${sites.name(t.site_id)}` : "semua site"}. Diisi petugas di setiap handover.`
+              : "Template nonaktif — tidak ditawarkan saat mengisi handover baru."
+          }
+          actions={
             <form action={toggleTemplate}>
               <input type="hidden" name="id" value={t.id} />
               <input type="hidden" name="back" value="detail" />
@@ -79,12 +86,9 @@ export default async function ChecklistTemplateDetailPage({
                 {t.is_active ? "Nonaktifkan" : "Aktifkan"}
               </Button>
             </form>
-            <Link href="/checklist" className={buttonClass("secondary")}>
-              <ArrowLeft className="size-4" aria-hidden /> Kembali
-            </Link>
-          </>
-        }
-      />
+          }
+        />
+      </div>
       <Flash searchParams={sp} />
 
       <Card>
@@ -97,7 +101,7 @@ export default async function ChecklistTemplateDetailPage({
             <Field label="Nama template" required>
               <Input name="name" required defaultValue={t.name} />
             </Field>
-            <Field label="Site">
+            <Field label="Berlaku untuk site">
               <Select name="site_id" defaultValue={t.site_id ?? ""}>
                 <option value="">— Umum (semua site) —</option>
                 {sites.list.map((s) => (
@@ -107,7 +111,7 @@ export default async function ChecklistTemplateDetailPage({
                 ))}
               </Select>
             </Field>
-            <SubmitButton variant="secondary">Simpan</SubmitButton>
+            <SubmitButton variant="secondary">Simpan pengaturan</SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -119,29 +123,41 @@ export default async function ChecklistTemplateDetailPage({
         </CardHeader>
         {items.length === 0 ? (
           <CardContent>
-            <p className="text-sm text-slate-500">Belum ada item.</p>
+            <p className="text-sm text-slate-500">
+              Belum ada item pemeriksaan. Tambahkan item lewat formulir di bawah agar template ini bisa diisi saat handover.
+            </p>
           </CardContent>
         ) : (
           <Table>
             <THead>
               <TR>
-                <TH>Urutan</TH>
-                <TH>Bagian</TH>
-                <TH>Label</TH>
-                <TH>Tipe</TH>
-                <TH>Detail</TH>
-                <TH>Wajib</TH>
-                <TH />
+                <TH className="hidden sm:table-cell">Urutan</TH>
+                <TH className="hidden md:table-cell">Bagian</TH>
+                <TH>Item</TH>
+                <TH className="hidden sm:table-cell">Jenis isian</TH>
+                <TH className="hidden lg:table-cell">Batas normal / pilihan</TH>
+                <TH className="hidden sm:table-cell">Wajib</TH>
+                <TH>
+                  <span className="sr-only">Aksi</span>
+                </TH>
               </TR>
             </THead>
             <TBody>
               {items.map((i) => (
                 <TR key={i.id}>
-                  <TD className="tabular-nums">{i.sort_order}</TD>
-                  <TD>{i.section ?? "-"}</TD>
-                  <TD className="font-medium text-slate-900">{i.label}</TD>
-                  <TD>{typeLabel(i.input_type)}</TD>
-                  <TD className="text-xs text-slate-500">
+                  <TD className="hidden tabular-nums sm:table-cell">{i.sort_order}</TD>
+                  <TD className="hidden md:table-cell">{i.section ?? "Umum"}</TD>
+                  <TD>
+                    <p className="font-medium text-slate-900">
+                      {i.label}
+                      {i.is_required && <span className="ml-0.5 text-red-500 sm:hidden">*</span>}
+                    </p>
+                    <p className="text-xs text-slate-500 sm:hidden">
+                      {i.section ?? "Umum"} · {typeLabel(i.input_type)}
+                    </p>
+                  </TD>
+                  <TD className="hidden sm:table-cell">{typeLabel(i.input_type)}</TD>
+                  <TD className="hidden text-xs text-slate-500 lg:table-cell">
                     {i.input_type === "number" && (
                       <>
                         {i.unit && <span>Satuan: {i.unit}. </span>}
@@ -154,14 +170,21 @@ export default async function ChecklistTemplateDetailPage({
                     )}
                     {i.input_type === "select" && Array.isArray(i.options) && <span>{i.options.join(", ")}</span>}
                   </TD>
-                  <TD>{i.is_required ? "Ya" : "Tidak"}</TD>
+                  <TD className="hidden sm:table-cell">{i.is_required ? "Ya" : "Tidak"}</TD>
                   <TD className="text-right">
                     <form action={deleteTemplateItem}>
                       <input type="hidden" name="template_id" value={t.id} />
                       <input type="hidden" name="item_id" value={i.id} />
-                      <Button type="submit" variant="ghost" size="sm" aria-label="Hapus item" title="Hapus item">
+                      <ConfirmSubmitButton
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Hapus item ${i.label}`}
+                        title="Hapus item"
+                        pendingText="…"
+                        confirm={`Hapus item "${i.label}" dari template ini?`}
+                      >
                         <Trash2 className="size-4 text-red-600" aria-hidden />
-                      </Button>
+                      </ConfirmSubmitButton>
                     </form>
                   </TD>
                 </TR>
@@ -173,13 +196,16 @@ export default async function ChecklistTemplateDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Tambah item</CardTitle>
+          <div>
+            <CardTitle>Tambah item</CardTitle>
+            <p className="mt-0.5 text-xs text-slate-500">Satuan, batas normal, dan pilihan hanya dipakai sesuai jenis isian yang dipilih.</p>
+          </div>
         </CardHeader>
         <CardContent>
           <form action={addTemplateItem} className="space-y-4">
             <input type="hidden" name="template_id" value={t.id} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Bagian" hint="mis. Power, Cooling, Network">
+              <Field label="Bagian" hint="Pengelompokan, mis. Power, Cooling, Network. Kosong = Umum.">
                 <Input name="section" list="sections" />
                 <datalist id="sections">
                   {sections.map((s) => (
@@ -187,10 +213,10 @@ export default async function ChecklistTemplateDetailPage({
                   ))}
                 </datalist>
               </Field>
-              <Field label="Label" required>
+              <Field label="Nama item" required>
                 <Input name="label" required placeholder="mis. Suhu ruang server" />
               </Field>
-              <Field label="Tipe input" required>
+              <Field label="Jenis isian" required hint="Normal/Tidak normal, angka dengan batas, teks bebas, atau daftar pilihan.">
                 <Select name="input_type" defaultValue="boolean">
                   {INPUT_TYPES.map((x) => (
                     <option key={x.value} value={x.value}>
@@ -199,19 +225,19 @@ export default async function ChecklistTemplateDetailPage({
                   ))}
                 </Select>
               </Field>
-              <Field label="Satuan" hint="Untuk tipe Angka, mis. °C, %, V">
+              <Field label="Satuan" hint="Untuk jenis Angka, mis. °C, %, V.">
                 <Input name="unit" />
               </Field>
-              <Field label="Nilai minimum" hint="Untuk tipe Angka">
+              <Field label="Batas normal minimum" hint="Untuk jenis Angka. Di bawah ini ditandai tidak normal.">
                 <Input type="number" step="any" name="min_value" />
               </Field>
-              <Field label="Nilai maksimum" hint="Untuk tipe Angka">
+              <Field label="Batas normal maksimum" hint="Untuk jenis Angka. Di atas ini ditandai tidak normal.">
                 <Input type="number" step="any" name="max_value" />
               </Field>
-              <Field label="Pilihan" hint="Untuk tipe Pilihan, pisahkan dengan koma: Normal, Warning, Down" className="sm:col-span-2">
-                <Input name="options" />
+              <Field label="Daftar pilihan" hint="Untuk jenis Pilihan, pisahkan dengan koma." className="sm:col-span-2">
+                <Input name="options" placeholder="mis. Normal, Warning, Down" />
               </Field>
-              <Field label="Urutan">
+              <Field label="Urutan tampil" hint="Angka kecil tampil lebih dulu.">
                 <Input type="number" name="sort_order" defaultValue={nextSort} />
               </Field>
               <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-700">
@@ -220,7 +246,7 @@ export default async function ChecklistTemplateDetailPage({
               </label>
             </div>
             <div className="flex justify-end">
-              <SubmitButton>Tambah item</SubmitButton>
+              <SubmitButton pendingText="Menambahkan…">Tambah item</SubmitButton>
             </div>
           </form>
         </CardContent>

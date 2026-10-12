@@ -3,6 +3,7 @@ import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
 import type { Handover } from "@noc/supabase/types";
 import {
+  Alert,
   buttonClass,
   Card,
   EmptyState,
@@ -27,6 +28,11 @@ import { first, isDate } from "@/lib/util";
 
 export const metadata = { title: "Handover" };
 
+type Row = Pick<
+  Handover,
+  "id" | "handover_no" | "shift_date" | "from_shift_id" | "to_shift_id" | "site_id" | "outgoing_by" | "incoming_by" | "status"
+>;
+
 export default async function HandoverListPage({
   searchParams,
 }: {
@@ -38,22 +44,52 @@ export default async function HandoverListPage({
 
   const status = first(sp.status) ?? "";
   const date = first(sp.date) ?? "";
+  const mine = first(sp.mine) === "1";
+  const filtered = !!(status || date || mine);
 
   const supabase = await createClient();
-  let q = supabase.from("handovers").select("*").order("shift_date", { ascending: false }).order("created_at", { ascending: false }).limit(100);
+  let q = supabase
+    .from("handovers")
+    .select("id, handover_no, shift_date, from_shift_id, to_shift_id, site_id, outgoing_by, incoming_by, status")
+    .order("shift_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(100);
   if (isOneOf(HANDOVER_STATUSES, status)) q = q.eq("status", status);
   if (isDate(date)) q = q.eq("shift_date", date);
+  if (mine) q = q.or(`outgoing_by.eq.${auth.userId},incoming_by.eq.${auth.userId}`);
 
-  const [{ data }, profiles, shifts, sites] = await Promise.all([q, loadProfiles(supabase), loadShifts(supabase), loadSites(supabase)]);
-  const rows = (data as Handover[] | null) ?? [];
+  // Handover yang sedang menunggu tindakan user ini (diterima / diperbaiki).
+  const toReceive = supabase
+    .from("handovers")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "submitted")
+    .eq("incoming_by", auth.userId);
+  const toFix = supabase
+    .from("handovers")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "returned")
+    .eq("outgoing_by", auth.userId);
+
+  const [{ data }, receive, fix, profiles, shifts, sites] = await Promise.all([
+    q,
+    toReceive,
+    toFix,
+    loadProfiles(supabase),
+    loadShifts(supabase),
+    loadSites(supabase),
+  ]);
+  const rows = (data as Row[] | null) ?? [];
+  const receiveCount = receive.count ?? 0;
+  const fixCount = fix.count ?? 0;
+  const canCreate = auth.can("handover.create");
 
   return (
     <div>
       <PageHeader
         title="Serah Terima Shift"
-        description="Daftar handover antar shift."
+        description="Semua handover antar shift: buat, ajukan, dan terima kondisi shift dari rekan."
         actions={
-          auth.can("handover.create") && (
+          canCreate && (
             <Link href="/baru" className={buttonClass()}>
               <Plus className="size-4" aria-hidden /> Buat handover
             </Link>
@@ -62,8 +98,29 @@ export default async function HandoverListPage({
       />
       <Flash searchParams={sp} />
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
-        <div className="w-40">
+      {(receiveCount > 0 || fixCount > 0) && (
+        <Alert tone="warning" className="mb-4 space-y-1">
+          {receiveCount > 0 && (
+            <p>
+              <strong>{receiveCount} handover</strong> menunggu Anda terima.{" "}
+              <Link href="/?status=submitted&mine=1" className="font-medium underline">
+                Lihat
+              </Link>
+            </p>
+          )}
+          {fixCount > 0 && (
+            <p>
+              <strong>{fixCount} handover</strong> Anda dikembalikan penerima dan perlu diperbaiki.{" "}
+              <Link href="/?status=returned&mine=1" className="font-medium underline">
+                Lihat
+              </Link>
+            </p>
+          )}
+        </Alert>
+      )}
+
+      <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-40">
           <Select name="status" defaultValue={status} aria-label="Status">
             <option value="">Semua status</option>
             {HANDOVER_STATUSES.map((s) => (
@@ -73,13 +130,17 @@ export default async function HandoverListPage({
             ))}
           </Select>
         </div>
-        <div className="w-44">
-          <Input type="date" name="date" defaultValue={date} aria-label="Tanggal" />
+        <div className="w-full sm:w-44">
+          <Input type="date" name="date" defaultValue={date} aria-label="Tanggal shift" />
         </div>
+        <label className="flex h-10 items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" name="mine" value="1" defaultChecked={mine} className="size-4 rounded border-slate-300" />
+          Hanya yang melibatkan saya
+        </label>
         <button type="submit" className={buttonClass("secondary")}>
-          Filter
+          Terapkan
         </button>
-        {(status || date) && (
+        {filtered && (
           <Link href="/" className={buttonClass("ghost")}>
             Reset
           </Link>
@@ -87,45 +148,88 @@ export default async function HandoverListPage({
       </form>
 
       {rows.length === 0 ? (
-        <EmptyState title="Belum ada handover" description="Handover yang dibuat akan tampil di sini." />
+        filtered ? (
+          <EmptyState
+            title="Tidak ada handover yang cocok"
+            description="Coba ubah atau reset filter status, tanggal, dan keterlibatan Anda."
+            action={
+              <Link href="/" className={buttonClass("secondary")}>
+                Reset filter
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="Belum ada handover"
+            description={
+              canCreate
+                ? "Buat handover di akhir shift untuk menyerahkan kondisi jaringan, pekerjaan tertunda, dan checklist ke shift berikutnya."
+                : "Handover yang dibuat tim NOC akan tampil di sini."
+            }
+            action={
+              canCreate && (
+                <Link href="/baru" className={buttonClass()}>
+                  <Plus className="size-4" aria-hidden /> Buat handover pertama
+                </Link>
+              )
+            }
+          />
+        )
       ) : (
         <Card>
           <Table>
             <THead>
               <TR>
-                <TH>No</TH>
-                <TH>Tanggal</TH>
-                <TH>Shift</TH>
-                <TH>Site</TH>
-                <TH>Penyerah</TH>
-                <TH>Penerima</TH>
+                <TH>No. handover</TH>
+                <TH className="hidden sm:table-cell">Tanggal</TH>
+                <TH className="hidden md:table-cell">Shift</TH>
+                <TH className="hidden lg:table-cell">Site</TH>
+                <TH className="hidden md:table-cell">Penyerah → Penerima</TH>
                 <TH>Status</TH>
               </TR>
             </THead>
             <TBody>
-              {rows.map((h) => (
-                <TR key={h.id}>
-                  <TD>
-                    <Link href={`/${h.id}`} className="font-medium text-brand-600 hover:underline">
-                      {h.handover_no ?? "(tanpa nomor)"}
-                    </Link>
-                  </TD>
-                  <TD className="whitespace-nowrap">{formatDate(h.shift_date)}</TD>
-                  <TD className="whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      {shifts.name(h.from_shift_id)} <ArrowRight className="size-3.5 text-slate-400" aria-hidden /> {shifts.name(h.to_shift_id)}
-                    </span>
-                  </TD>
-                  <TD>{sites.name(h.site_id)}</TD>
-                  <TD>{profiles.name(h.outgoing_by)}</TD>
-                  <TD>{profiles.name(h.incoming_by)}</TD>
-                  <TD>
-                    <StatusBadge status={h.status} />
-                  </TD>
-                </TR>
-              ))}
+              {rows.map((h) => {
+                const shiftText = (
+                  <span className="inline-flex items-center gap-1">
+                    {shifts.name(h.from_shift_id)} <ArrowRight className="size-3.5 text-slate-400" aria-hidden /> {shifts.name(h.to_shift_id)}
+                  </span>
+                );
+                return (
+                  <TR key={h.id}>
+                    <TD>
+                      <Link href={`/${h.id}`} className="font-medium text-brand-600 hover:underline">
+                        {h.handover_no ?? "(belum bernomor)"}
+                      </Link>
+                      {/* Ringkasan untuk layar kecil (kolom lain disembunyikan) */}
+                      <p className="mt-0.5 text-xs text-slate-500 md:hidden">
+                        <span className="sm:hidden">{formatDate(h.shift_date)} · </span>
+                        {shiftText}
+                      </p>
+                      <p className="text-xs text-slate-500 md:hidden">
+                        {profiles.name(h.outgoing_by)} → {h.incoming_by ? profiles.name(h.incoming_by) : "belum ditentukan"}
+                      </p>
+                    </TD>
+                    <TD className="hidden whitespace-nowrap sm:table-cell">{formatDate(h.shift_date)}</TD>
+                    <TD className="hidden whitespace-nowrap md:table-cell">{shiftText}</TD>
+                    <TD className="hidden lg:table-cell">{sites.name(h.site_id)}</TD>
+                    <TD className="hidden md:table-cell">
+                      {profiles.name(h.outgoing_by)} <span className="text-slate-400">→</span>{" "}
+                      {h.incoming_by ? profiles.name(h.incoming_by) : <span className="text-slate-400">belum ditentukan</span>}
+                    </TD>
+                    <TD>
+                      <StatusBadge status={h.status} />
+                    </TD>
+                  </TR>
+                );
+              })}
             </TBody>
           </Table>
+          {rows.length === 100 && (
+            <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">
+              Menampilkan 100 handover terbaru. Gunakan filter tanggal untuk melihat yang lebih lama.
+            </p>
+          )}
         </Card>
       )}
     </div>

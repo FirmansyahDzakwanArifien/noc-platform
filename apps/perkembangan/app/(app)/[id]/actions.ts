@@ -195,23 +195,23 @@ export async function addTask(projectId: string, formData: FormData) {
   const priority = oneOf(str(formData, "priority"), PRIORITIES) ?? "medium";
   const status = oneOf(str(formData, "status"), TASK_STATUSES) ?? "todo";
   const weight = num(formData, "weight") ?? 1;
-  if (weight <= 0 || weight > 9999) fail(back, "Bobot harus lebih dari 0.");
+  if (weight <= 0 || weight > 9999) fail(back, "Bobot harus antara 0,01 dan 9999.");
   const start = optDate(formData, "start_date", back);
   const due = optDate(formData, "due_date", back);
   if (start && due && due < start) fail(back, "Tenggat tidak boleh sebelum tanggal mulai.");
-  if (assignee && !isUuid(assignee)) fail(back, "Assignee tidak valid.");
+  if (assignee && !isUuid(assignee)) fail(back, "PIC tidak valid.");
   if (milestone && !isUuid(milestone)) fail(back, "Milestone tidak valid.");
 
   // Subtask mewarisi milestone parent bila milestone tidak dipilih.
   if (parent) {
-    if (!isUuid(parent)) fail(back, "Parent task tidak valid.");
+    if (!isUuid(parent)) fail(back, "Task induk tidak valid.");
     const { data: p } = await supabase
       .from("project_tasks")
       .select("id, milestone_id")
       .eq("id", parent)
       .eq("project_id", projectId)
       .maybeSingle();
-    if (!p) fail(back, "Parent task tidak ditemukan di project ini.");
+    if (!p) fail(back, "Task induk tidak ditemukan di project ini.");
     milestone ??= (p as { milestone_id: string | null }).milestone_id;
   }
 
@@ -242,7 +242,7 @@ export async function addTask(projectId: string, formData: FormData) {
     const { error: mErr } = await supabase
       .from("project_members")
       .upsert({ project_id: projectId, user_id: assignee, role: "member" }, { onConflict: "project_id,user_id", ignoreDuplicates: true });
-    if (mErr) note = " (assignee belum terdaftar sebagai anggota)";
+    if (mErr) note = " (PIC belum terdaftar sebagai anggota project)";
   }
 
   refresh(projectId);
@@ -280,7 +280,7 @@ export async function addProgress(projectId: string, formData: FormData) {
   if (taskId && !isUuid(taskId)) fail(back, "Task tidak valid.");
   const pct = num(formData, "progress_pct");
   if (pct !== null && (pct < 0 || pct > 100)) fail(back, "Progress harus 0–100.");
-  if (pct !== null && !taskId) fail(back, "Pilih task bila ingin memperbarui progress %.");
+  if (pct !== null && !taskId) fail(back, "Pilih task terkait bila ingin mengisi progress task (%).");
   const reportDate = optDate(formData, "report_date", back) ?? toDateInput();
   if (reportDate > toDateInput()) fail(back, "Tanggal laporan tidak boleh di masa depan.");
 

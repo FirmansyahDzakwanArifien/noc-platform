@@ -37,7 +37,7 @@ const STATUS: Record<string, [Tone, string]> = {
   approved: ["green", "Disetujui"],
   rejected: ["red", "Ditolak"],
   cancelled: ["gray", "Dibatalkan"],
-  active: ["blue", "Aktif"],
+  active: ["blue", "Berlangsung"],
   completed: ["green", "Selesai"],
   expired: ["gray", "Kedaluwarsa"],
   published: ["green", "Dipublikasikan"],
@@ -45,26 +45,26 @@ const STATUS: Record<string, [Tone, string]> = {
   // handover
   acknowledged: ["green", "Diterima"],
   returned: ["orange", "Dikembalikan"],
-  open: ["yellow", "Open"],
+  open: ["yellow", "Terbuka"],
   in_progress: ["blue", "Dikerjakan"],
-  resolved: ["green", "Resolved"],
-  closed: ["gray", "Closed"],
+  resolved: ["green", "Teratasi"],
+  closed: ["gray", "Ditutup"],
   // project
   planning: ["gray", "Perencanaan"],
   on_going: ["blue", "Berjalan"],
   on_hold: ["orange", "Ditunda"],
   done: ["green", "Selesai"],
-  todo: ["gray", "To do"],
-  review: ["purple", "Review"],
+  todo: ["gray", "Belum mulai"],
+  review: ["purple", "Direview"],
   blocked: ["red", "Terhambat"],
   // incident
   investigating: ["orange", "Investigasi"],
-  mitigated: ["purple", "Mitigasi"],
+  mitigated: ["purple", "Termitigasi"],
   // prioritas
-  low: ["gray", "Low"],
-  medium: ["blue", "Medium"],
-  high: ["orange", "High"],
-  critical: ["red", "Critical"],
+  low: ["gray", "Rendah"],
+  medium: ["blue", "Sedang"],
+  high: ["orange", "Tinggi"],
+  critical: ["red", "Kritis"],
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

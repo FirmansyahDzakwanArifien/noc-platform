@@ -1,3 +1,4 @@
+import type { Tone } from "@noc/ui";
 import type { LeaveType, PermitStatus, PermitType, Priority } from "@noc/supabase/types";
 
 export const PERMIT_TYPES: Record<PermitType, string> = {
@@ -20,11 +21,35 @@ export const PERMIT_STATUSES: Record<PermitStatus, string> = {
   expired: "Kedaluwarsa",
 };
 
+/** Penjelasan singkat tiap jenis izin (hint di form). */
+export const PERMIT_TYPE_HINTS: Record<PermitType, string> = {
+  akses_site: "Kunjungan/akses ke lokasi tanpa pekerjaan teknis.",
+  pekerjaan: "Pekerjaan instalasi/perbaikan di lokasi.",
+  maintenance: "Pemeliharaan rutin atau terjadwal.",
+  change_request: "Perubahan konfigurasi/perangkat produksi. Wajib rencana rollback.",
+  keluar_masuk_barang: "Membawa perangkat/barang masuk atau keluar lokasi.",
+};
+
 export const RISK_LEVELS: Record<Priority, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  critical: "Critical",
+  low: "Rendah",
+  medium: "Sedang",
+  high: "Tinggi",
+  critical: "Kritis",
+};
+
+export const RISK_TONES: Record<Priority, Tone> = {
+  low: "gray",
+  medium: "blue",
+  high: "orange",
+  critical: "red",
+};
+
+export const LEAVE_HINTS: Record<LeaveType, string> = {
+  cuti: "Cuti yang direncanakan (tahunan/pribadi).",
+  izin: "Tidak masuk karena keperluan mendesak.",
+  sakit: "Tidak masuk karena sakit.",
+  tukar_shift: "Minta rekan menggantikan salah satu jadwal shift Anda.",
+  dinas: "Tugas di luar kantor/lokasi kerja.",
 };
 
 export const LEAVE_TYPES: Record<LeaveType, string> = {

@@ -49,3 +49,19 @@ export function first(v: string | string[] | undefined): string | undefined {
 export function todayWIB(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 }
+
+/** "2026-10-12" → "Senin, 12 Oktober 2026" */
+export function formatLongDate(date: string) {
+  return new Date(date + "T00:00:00Z").toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** Selisih hari antara dua tanggal "YYYY-MM-DD" (b − a). */
+export function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86_400_000);
+}

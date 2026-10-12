@@ -130,7 +130,7 @@ export async function addItem(formData: FormData) {
   const { supabase, auth } = await actionContext(back);
   await requireEditableDraft(supabase, auth, id, back);
   const qty = num(formData, "qty") ?? 1;
-  if (!Number.isInteger(qty) || qty < 1) fail(back, "Qty harus bilangan bulat ≥ 1.");
+  if (!Number.isInteger(qty) || qty < 1) fail(back, "Jumlah barang minimal 1.");
   const { error } = await supabase.from("permit_items").insert({
     permit_id: id,
     direction: str(formData, "direction") === "keluar" ? "keluar" : "masuk",
@@ -165,7 +165,7 @@ export async function addApprovalStep(formData: FormData) {
   const { supabase } = await actionContext(back, "permit.manage");
   const permit = await loadPermit(supabase, id, back);
   if (!["submitted", "in_review"].includes(permit.status)) {
-    fail(back, "Alur approval hanya bisa diatur saat izin berstatus Diajukan / Ditinjau.");
+    fail(back, "Alur persetujuan hanya bisa diatur saat izin berstatus Diajukan / Ditinjau.");
   }
   const approverId = req(formData, "approver_id", back, "Approver");
   if (!isUuid(approverId)) fail(back, "Approver tidak valid.");
@@ -179,10 +179,10 @@ export async function addApprovalStep(formData: FormData) {
 
   if (permit.status === "submitted") {
     const err = await updatePermit(supabase, id, { status: "in_review" });
-    if (err) fail(back, `Step ${nextStep} ditambahkan, tetapi status izin gagal diubah: ${err}`);
+    if (err) fail(back, `Langkah ${nextStep} ditambahkan, tetapi status izin gagal diubah: ${err}`);
   }
   refresh(id);
-  done(back, `Step approval ${nextStep} ditambahkan.`);
+  done(back, `Approver langkah ${nextStep} ditambahkan.`);
 }
 
 export async function decideApproval(formData: FormData) {
@@ -210,7 +210,7 @@ export async function decideApproval(formData: FormData) {
   if (e1) fail(back, dbError(e1));
   const all = (allRows ?? []) as PermitApproval[];
   if (all.some((s) => s.step < step.step && s.decision !== "approved")) {
-    fail(back, "Menunggu keputusan step approval sebelumnya.");
+    fail(back, "Masih menunggu keputusan approver di langkah sebelumnya.");
   }
 
   const now = new Date().toISOString();

@@ -31,7 +31,11 @@ import { deletePeriod, fillRotation, saveGrid, setPeriodStatus } from "./actions
 
 export const metadata = { title: "Editor Jadwal" };
 
-type PeriodRow = SchedulePeriod & { teams: { name: string } | null; sites: { name: string } | null };
+type PeriodRow = Pick<
+  SchedulePeriod,
+  "id" | "name" | "start_date" | "end_date" | "status" | "team_id" | "notes" | "published_at"
+> & { teams: { name: string } | null; sites: { name: string } | null };
+type ShiftLite = Pick<Shift, "id" | "code" | "name" | "color" | "is_active">;
 type ProfileLite = Pick<Profile, "id" | "full_name" | "team_id" | "is_active">;
 type SP = Promise<{ users?: string; add?: string; semua?: string; error?: string; success?: string }>;
 
@@ -59,15 +63,15 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
 
   const supabase = await createClient();
   const [{ data: periodData }, { data: shiftData }, { data: profileData }, cells] = await Promise.all([
-    supabase.from("schedule_periods").select("*, teams(name), sites(name)").eq("id", id).maybeSingle(),
-    supabase.from("shifts").select("*").order("sort_order"),
+    supabase.from("schedule_periods").select("id, name, start_date, end_date, status, team_id, notes, published_at, teams(name), sites(name)").eq("id", id).maybeSingle(),
+    supabase.from("shifts").select("id, code, name, color, is_active").order("sort_order"),
     supabase.from("profiles").select("id, full_name, team_id, is_active").order("full_name"),
     fetchPeriodCells(supabase, id),
   ]);
   const period = periodData as unknown as PeriodRow | null;
   if (!period) notFound();
 
-  const allShifts = (shiftData as Shift[] | null) ?? [];
+  const allShifts = (shiftData as ShiftLite[] | null) ?? [];
   const profiles = (profileData as ProfileLite[] | null) ?? [];
   const existing = cells.data;
 
@@ -92,7 +96,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
     .map((p) => p.id);
   const rowIds = [...new Set([...baseIds, ...scheduledUsers, ...extra])];
   const rows = rowIds
-    .map((uid) => ({ id: uid, name: profileById.get(uid)?.full_name ?? `(user ${uid.slice(0, 8)})`, active: profileById.get(uid)?.is_active ?? false }))
+    .map((uid) => ({ id: uid, name: profileById.get(uid)?.full_name ?? "(Pengguna tidak dikenal)", active: profileById.get(uid)?.is_active ?? false }))
     .sort((a, b) => a.name.localeCompare(b.name, "id"));
   const baseSet = new Set(baseIds);
   const rowSet = new Set(rowIds);
@@ -106,11 +110,13 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
   const defaultPattern =
     ["P", "S", "M", "OFF"].every((c) => shifts.some((s) => s.code === c)) ? "P,P,S,S,M,M,OFF,OFF" : shifts.map((s) => s.code).join(",");
   const multiCells = [...byCell.values()].filter((c) => c.count > 1).length;
+  const totalCells = rows.length * days.length;
+  const filledCells = rows.reduce((n, u) => n + days.filter((d) => byCell.has(cellKey(u.id, d))).length, 0);
 
   return (
     <div className="space-y-6">
       <Link href="/kelola" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="size-4" aria-hidden /> Semua periode
+        <ArrowLeft className="size-4" aria-hidden /> Kembali ke daftar periode
       </Link>
 
       <PageHeader
@@ -121,10 +127,10 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
         }
         description={
           <>
-            {rangeLabel(period.start_date, period.end_date)} · {days.length} hari
-            {period.teams?.name && <> · Tim {period.teams.name}</>}
-            {period.sites?.name && <> · {period.sites.name}</>}
-            {period.published_at && <> · Dipublikasikan {formatDateTime(period.published_at)}</>}
+            {rangeLabel(period.start_date, period.end_date)}
+            {period.teams?.name ? <> · Tim {period.teams.name}</> : <> · Semua tim</>}
+            {period.sites?.name && <> · Site {period.sites.name}</>}
+            {period.published_at ? <> · Dipublikasikan {formatDateTime(period.published_at)}</> : <> · Belum pernah dipublikasikan</>}
           </>
         }
         actions={
@@ -134,21 +140,33 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
             </Link>
             {period.status === "draft" && (
               <StatusForm id={id} back={selfPath} to="published">
-                <ConfirmSubmit variant="success" pendingText="Memproses…" confirm="Publikasikan jadwal ini? Semua yang terjadwal akan mendapat notifikasi.">
-                  Publish
+                <ConfirmSubmit
+                  variant="success"
+                  pendingText="Memproses…"
+                  confirm="Publikasikan jadwal ini? Jadwal akan terlihat oleh tim dan semua yang terjadwal mendapat notifikasi. Pastikan perubahan grid sudah disimpan."
+                >
+                  Publikasikan
                 </ConfirmSubmit>
               </StatusForm>
             )}
             {period.status !== "draft" && (
               <StatusForm id={id} back={selfPath} to="draft">
-                <ConfirmSubmit variant="secondary" pendingText="Memproses…" confirm="Kembalikan ke draft? Jadwal tidak akan terlihat oleh user biasa.">
+                <ConfirmSubmit
+                  variant="secondary"
+                  pendingText="Memproses…"
+                  confirm="Kembalikan ke draft? Jadwal periode ini akan disembunyikan dari anggota tim sampai dipublikasikan lagi."
+                >
                   Kembalikan ke draft
                 </ConfirmSubmit>
               </StatusForm>
             )}
             {period.status !== "archived" && (
               <StatusForm id={id} back={selfPath} to="archived">
-                <ConfirmSubmit variant="secondary" pendingText="Memproses…" confirm="Arsipkan periode ini?">
+                <ConfirmSubmit
+                  variant="secondary"
+                  pendingText="Memproses…"
+                  confirm="Arsipkan periode ini? Periode arsip tidak muncul di pilihan Kalender Tim dan tidak terlihat oleh anggota tim."
+                >
                   Arsipkan
                 </ConfirmSubmit>
               </StatusForm>
@@ -167,10 +185,34 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
       />
       <Flash searchParams={sp} />
 
-      {period.status === "published" && (
-        <Alert tone="info">Periode ini sudah dipublikasikan — perubahan jadwal langsung terlihat oleh tim.</Alert>
+      {/* Ringkasan */}
+      <div className="grid grid-cols-3 gap-3">
+        <Stat label="Lama periode" value={`${days.length} hari`} />
+        <Stat label="Anggota" value={`${rows.length} orang`} />
+        <Stat
+          label="Sel terisi"
+          value={`${filledCells} / ${totalCells}`}
+          hint={totalCells > 0 && filledCells < totalCells ? `${totalCells - filledCells} masih kosong` : "Lengkap"}
+        />
+      </div>
+
+      {period.status === "draft" && (
+        <Alert tone="warning">
+          Periode ini masih <strong>draft</strong> — belum terlihat oleh anggota tim. Isi jadwal, tekan <strong>Simpan jadwal</strong>,
+          lalu <strong>Publikasikan</strong>.
+        </Alert>
       )}
-      {period.notes && <p className="text-sm text-slate-600">Catatan: {period.notes}</p>}
+      {period.status === "published" && (
+        <Alert tone="info">Periode ini sudah dipublikasikan — setiap perubahan yang disimpan langsung terlihat oleh tim.</Alert>
+      )}
+      {period.status === "archived" && (
+        <Alert tone="info">Periode ini diarsipkan dan tidak terlihat oleh anggota tim. Kembalikan ke draft untuk mengubah lalu mempublikasikan lagi.</Alert>
+      )}
+      {period.notes && (
+        <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          <span className="font-medium text-slate-700">Catatan:</span> {period.notes}
+        </p>
+      )}
       {cells.error && <Alert tone="error">Gagal memuat jadwal: {cells.error.message}</Alert>}
       {multiCells > 0 && (
         <Alert tone="warning">
@@ -182,18 +224,21 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
       {/* ---------------- Grid ---------------- */}
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Jadwal</CardTitle>
+          <div>
+            <CardTitle>Isi jadwal</CardTitle>
+            <p className="mt-0.5 text-xs text-slate-500">Pilih kode shift di setiap sel, lalu tekan Simpan jadwal di bawah tabel.</p>
+          </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {period.team_id && (
               <Link href={qs(extra, !showAll)} className="font-medium text-brand-600 hover:underline">
-                {showAll ? `Hanya anggota tim ${period.teams?.name ?? ""}` : "Tampilkan semua user aktif"}
+                {showAll ? `Hanya anggota tim ${period.teams?.name ?? ""}` : "Tampilkan semua pengguna aktif"}
               </Link>
             )}
             <form method="get" className="flex items-center gap-2">
               {extra.length > 0 && <input type="hidden" name="users" value={extra.join(",")} />}
               {showAll && <input type="hidden" name="semua" value="1" />}
-              <Select name="add" defaultValue="" className="h-8 w-48 text-xs" aria-label="Tambah user ke grid">
-                <option value="">+ Tambah user…</option>
+              <Select name="add" defaultValue="" className="h-8 w-44 text-xs sm:w-48" aria-label="Tambah anggota ke jadwal">
+                <option value="">+ Tambah anggota…</option>
                 {addable.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.full_name}
@@ -208,7 +253,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
         </CardHeader>
 
         {rows.length === 0 ? (
-          <CardContent className="text-sm text-slate-500">Tidak ada user aktif. Tambahkan user dari menu di atas.</CardContent>
+          <CardContent className="text-sm text-slate-500">Belum ada anggota di jadwal ini. Pilih anggota dari menu <strong>Tambah anggota</strong> di atas.</CardContent>
         ) : (
           <form action={saveGrid}>
             <input type="hidden" name="id" value={id} />
@@ -255,7 +300,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
                                 <Link
                                   href={qs(extra.filter((x) => x !== u.id))}
                                   className="ml-auto text-slate-400 hover:text-red-600"
-                                  title="Hapus baris"
+                                  title="Hapus baris (belum ada jadwal)"
                                   aria-label={`Hapus baris ${u.name}`}
                                 >
                                   <X className="size-3.5" />
@@ -276,7 +321,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
                                   defaultValue={cur?.shift_id ?? ""}
                                   data-shift-cell=""
                                   data-initial={cur?.shift_id ?? ""}
-                                  aria-label={`${u.name} ${d}`}
+                                  aria-label={`${u.name}, ${dayNumber(d)} ${MONTH_NAMES[Number(d.slice(5, 7)) - 1]}`}
                                   title={cur && cur.count > 1 ? `${cur.count} shift pada tanggal ini` : undefined}
                                   style={s ? shiftStyle(s.color) : undefined}
                                   className={cn(
@@ -313,7 +358,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
                     {s.name}
                   </span>
                 ))}
-                <span className="text-slate-400">Sel yang diubah ditandai garis biru.</span>
+                <span className="text-slate-400">Sel yang diubah tapi belum disimpan ditandai bingkai merah.</span>
               </div>
             </div>
           </form>
@@ -324,15 +369,22 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
       {rows.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Isi pola rotasi</CardTitle>
+            <div>
+              <CardTitle>Isi otomatis dengan pola rotasi</CardTitle>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Cara cepat mengisi banyak sel sekaligus: pola shift diulang terus sampai akhir periode, digeser untuk tiap anggota.
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <form action={fillRotation} className="space-y-4">
               <input type="hidden" name="id" value={id} />
               <input type="hidden" name="back" value={selfPath} />
               <fieldset>
-                <legend className="text-sm font-medium text-slate-700">User</legend>
-                <p className="text-xs text-slate-500">Urutan centang = urutan geser pola (sesuai urutan nama).</p>
+                <legend className="text-sm font-medium text-slate-700">
+                  Anggota yang diisi<span className="ml-0.5 text-red-500">*</span>
+                </legend>
+                <p className="text-xs text-slate-500">Pergeseran pola mengikuti urutan nama di bawah (orang pertama tanpa geser).</p>
                 <div className="mt-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
                   {rows.map((u) => (
                     <label key={u.id} className="flex items-center gap-2 text-sm text-slate-700">
@@ -344,29 +396,29 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
               </fieldset>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Field
-                  label="Pola"
+                  label="Pola shift"
                   required
                   className="sm:col-span-2"
                   hint={
                     <>
-                      Kode shift dipisah koma, ulang terus. Pakai <code>-</code> untuk mengosongkan. Kode tersedia:{" "}
+                      Kode shift dipisah koma, mis. <code>P,P,S,S,M,M,OFF,OFF</code>. Pakai <code>-</code> untuk sel kosong. Kode tersedia:{" "}
                       {shifts.filter((s) => s.is_active).map((s) => s.code).join(", ")}.
                     </>
                   }
                 >
                   <Input name="pattern" required defaultValue={defaultPattern} />
                 </Field>
-                <Field label="Mulai tanggal" hint="Hari pertama pola (indeks 0). Sel sebelum tanggal ini tidak diubah.">
+                <Field label="Mulai dari tanggal" hint="Pola dimulai dari kode pertama pada tanggal ini. Tanggal sebelumnya tidak diubah.">
                   <Input type="date" name="rot_start" defaultValue={period.start_date} min={period.start_date} max={period.end_date} />
                 </Field>
-                <Field label="Geser per orang" hint="Orang ke-n mulai dari posisi n × geser.">
+                <Field label="Geser per orang (hari)" hint="Mis. 2: orang kedua mulai dari kode ke-3, orang ketiga dari kode ke-5, dst.">
                   <Input type="number" name="offset" defaultValue={2} min={0} max={366} />
                 </Field>
               </div>
               <ConfirmSubmit
                 variant="secondary"
                 pendingText="Menerapkan…"
-                confirm="Terapkan pola? Jadwal user terpilih dari tanggal mulai s/d akhir periode akan ditimpa. Perubahan grid yang belum disimpan akan hilang."
+                confirm="Terapkan pola? Jadwal anggota terpilih dari tanggal mulai sampai akhir periode akan ditimpa. Perubahan di tabel yang belum disimpan akan hilang."
               >
                 Terapkan pola
               </ConfirmSubmit>
@@ -374,6 +426,16 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 sm:px-4">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-0.5 font-semibold tabular-nums text-slate-900">{value}</p>
+      {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
     </div>
   );
 }

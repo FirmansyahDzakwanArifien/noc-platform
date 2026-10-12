@@ -1,7 +1,26 @@
+import Link from "next/link";
 import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
-import { Card, CardContent, Field, Flash, Forbidden, Input, PageHeader, Select, SubmitButton, Textarea, toDateInput } from "@noc/ui";
+import {
+  Alert,
+  buttonClass,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Field,
+  Flash,
+  Forbidden,
+  formatTime,
+  Input,
+  PageHeader,
+  Select,
+  SubmitButton,
+  Textarea,
+} from "@noc/ui";
+import { ArrowLeft } from "lucide-react";
 import { loadProfiles, loadShifts, loadSites } from "@/lib/data";
+import { guessHandoverShift } from "@/lib/util";
 import { createHandover } from "./actions";
 
 export const metadata = { title: "Buat Handover" };
@@ -17,84 +36,125 @@ export default async function NewHandoverPage({
 
   const supabase = await createClient();
   const [profiles, shifts, sites] = await Promise.all([loadProfiles(supabase), loadShifts(supabase), loadSites(supabase)]);
+  // Default: shift yang sedang berjalan → shift berikutnya.
+  const guess = guessHandoverShift(shifts.working);
+
+  const shiftOptions = shifts.working.map((s) => (
+    <option key={s.id} value={s.id}>
+      {s.name} ({formatTime(s.start_time)}–{formatTime(s.end_time)})
+    </option>
+  ));
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Buat Handover" description="Handover dibuat sebagai draft; Anda tercatat sebagai penyerah." />
+      <PageHeader
+        title="Buat Handover"
+        description="Serahkan kondisi shift Anda ke shift berikutnya. Anda tercatat sebagai penyerah."
+        actions={
+          <Link href="/" className={buttonClass("secondary")}>
+            <ArrowLeft className="size-4" aria-hidden /> Kembali
+          </Link>
+        }
+      />
       <Flash searchParams={sp} />
-      <Card>
-        <CardContent>
-          <form action={createHandover} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Site" hint="Kosongkan jika berlaku umum.">
-                <Select name="site_id" defaultValue="">
-                  <option value="">— Umum —</option>
-                  {sites.active.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code} · {s.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Tanggal shift" required>
-                <Input type="date" name="shift_date" defaultValue={toDateInput()} required />
-              </Field>
-              <Field label="Dari shift" required>
-                <Select name="from_shift_id" required defaultValue="">
-                  <option value="" disabled>
-                    Pilih shift
-                  </option>
-                  {shifts.working.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)})
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Ke shift" required>
-                <Select name="to_shift_id" required defaultValue="">
-                  <option value="" disabled>
-                    Pilih shift
-                  </option>
-                  {shifts.working.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)})
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Penerima" hint="Kosongkan untuk memakai leader shift tujuan dari jadwal (jika ada)." className="sm:col-span-2">
-                <Select name="incoming_by" defaultValue="">
-                  <option value="">— Belum ditentukan —</option>
-                  {profiles.active
-                    .filter((p) => p.id !== auth.userId)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name}
-                      </option>
-                    ))}
-                </Select>
-              </Field>
-            </div>
-            <Field label="Ringkasan kondisi shift">
-              <Textarea name="summary" rows={4} placeholder="Kondisi jaringan, kejadian penting, dll." />
+
+      {shifts.working.length === 0 && (
+        <Alert tone="warning" className="mb-4">
+          Belum ada data shift kerja aktif. Minta admin menambahkan shift (mis. Pagi, Siang, Malam) terlebih dahulu.
+        </Alert>
+      )}
+
+      <form action={createHandover} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>1. Shift yang diserahterimakan</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field label="Tanggal shift" required hint="Tanggal shift Anda dimulai (untuk shift malam: tanggal sebelum tengah malam).">
+              <Input type="date" name="shift_date" defaultValue={guess.date} required />
             </Field>
-            <Field label="Catatan">
-              <Textarea name="notes" rows={3} />
+            <Field label="Site" hint="Pilih “Umum” jika handover berlaku untuk seluruh NOC.">
+              <Select name="site_id" defaultValue="">
+                <option value="">Umum (semua site)</option>
+                {sites.active.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code} · {s.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
-            <label className="flex items-start gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="carry_over" defaultChecked className="mt-0.5 size-4 rounded border-slate-300" />
-              <span>Bawa item terbuka dari handover sebelumnya (site yang sama)</span>
+            <Field label="Dari shift (shift Anda)" required>
+              <Select name="from_shift_id" required defaultValue={guess.fromId}>
+                <option value="" disabled>
+                  Pilih shift
+                </option>
+                {shiftOptions}
+              </Select>
+            </Field>
+            <Field label="Ke shift (penerima)" required>
+              <Select name="to_shift_id" required defaultValue={guess.toId}>
+                <option value="" disabled>
+                  Pilih shift
+                </option>
+                {shiftOptions}
+              </Select>
+            </Field>
+            <Field
+              label="Penerima"
+              hint="Biarkan kosong untuk otomatis memakai leader shift tujuan dari jadwal. Penerima wajib ada sebelum handover diajukan."
+              className="sm:col-span-2"
+            >
+              <Select name="incoming_by" defaultValue="">
+                <option value="">Otomatis dari jadwal / tentukan nanti</option>
+                {profiles.active
+                  .filter((p) => p.id !== auth.userId)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.full_name}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>2. Kondisi shift</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Field label="Ringkasan kondisi shift" hint="Bisa dilengkapi nanti sebelum handover diajukan.">
+              <Textarea
+                name="summary"
+                rows={4}
+                placeholder="mis. Semua link normal. Link ISP A sempat flapping 14:10–14:25, sudah stabil. Genset diuji pukul 10:00, OK."
+              />
+            </Field>
+            <Field label="Catatan tambahan">
+              <Textarea name="notes" rows={2} placeholder="Opsional: pesan untuk shift berikutnya." />
+            </Field>
+            <label className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+              <input type="checkbox" name="carry_over" defaultChecked className="mt-0.5 size-4 shrink-0 rounded border-slate-300" />
+              <span>
+                <span className="font-medium text-slate-900">Bawa item yang belum selesai</span>
+                <span className="block text-xs text-slate-500">
+                  Item berstatus Open / Dikerjakan dari handover terakhir di site yang sama akan disalin ke handover ini.
+                </span>
+              </span>
             </label>
-            <p className="text-xs text-slate-500">
-              Anggota tim shift asal &amp; tujuan diisi otomatis dari jadwal shift yang sudah dipublikasikan.
-            </p>
-            <div className="flex justify-end">
-              <SubmitButton>Buat draft</SubmitButton>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-500">
+            Handover disimpan sebagai <strong>draft</strong>. Anggota tim kedua shift diisi otomatis dari jadwal yang sudah
+            dipublikasikan. Item & checklist ditambahkan di langkah berikutnya.
+          </p>
+          <SubmitButton pendingText="Membuat draft…" className="shrink-0">
+            Buat draft handover
+          </SubmitButton>
+        </div>
+      </form>
     </div>
   );
 }

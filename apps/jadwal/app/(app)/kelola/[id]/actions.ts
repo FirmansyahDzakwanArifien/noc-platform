@@ -38,9 +38,11 @@ export async function saveGrid(formData: FormData) {
   if (!UUID_RE.test(id)) fail("/kelola", "Periode tidak valid.");
   const back = backPath(formData, id);
   const { supabase, auth } = await actionContext(back, "schedule.manage");
-  const period = await loadPeriod(supabase, id, back);
+  const [period, { data: shiftData }] = await Promise.all([
+    loadPeriod(supabase, id, back),
+    supabase.from("shifts").select("id"),
+  ]);
 
-  const { data: shiftData } = await supabase.from("shifts").select("id");
   const shiftIds = new Set(((shiftData as { id: string }[] | null) ?? []).map((s) => s.id));
 
   const desired = new Map<string, string | null>();
@@ -55,7 +57,7 @@ export async function saveGrid(formData: FormData) {
     desired.set(cellKey(uid, date), v === "" ? null : v);
     users.add(uid);
   }
-  if (desired.size === 0) fail(back, "Tidak ada sel jadwal yang dikirim.");
+  if (desired.size === 0) fail(back, "Tidak ada sel jadwal yang dikirim. Muat ulang halaman lalu coba lagi.");
 
   const { data: existing, error: exErr } = await fetchPeriodCells(supabase, id, [...users]);
   if (exErr) fail(back, dbError(exErr));
@@ -80,12 +82,15 @@ export async function fillRotation(formData: FormData) {
   if (!UUID_RE.test(id)) fail("/kelola", "Periode tidak valid.");
   const back = backPath(formData, id);
   const { supabase, auth } = await actionContext(back, "schedule.manage");
-  const period = await loadPeriod(supabase, id, back);
+  const [period, { data: shiftData, error: shErr }] = await Promise.all([
+    loadPeriod(supabase, id, back),
+    supabase.from("shifts").select("id, code, is_active"),
+  ]);
 
   const users = formData
     .getAll("rot_users")
     .filter((v): v is string => typeof v === "string" && UUID_RE.test(v));
-  if (users.length === 0) fail(back, "Pilih minimal satu user untuk pola rotasi.");
+  if (users.length === 0) fail(back, "Centang minimal satu anggota untuk diisi pola rotasi.");
 
   const patternText = req(formData, "pattern", back, "Pola");
   const start = str(formData, "rot_start") ?? period.start_date;
@@ -93,7 +98,6 @@ export async function fillRotation(formData: FormData) {
   if (start > period.end_date) fail(back, "Tanggal mulai pola di luar periode.");
   const offset = Math.trunc(num(formData, "offset") ?? 0);
 
-  const { data: shiftData, error: shErr } = await supabase.from("shifts").select("id, code, is_active");
   if (shErr) fail(back, dbError(shErr));
   const byCode = new Map<string, string>();
   for (const s of (shiftData as { id: string; code: string; is_active: boolean }[] | null) ?? []) {
@@ -104,8 +108,8 @@ export async function fillRotation(formData: FormData) {
     .split(/[\s,;]+/)
     .map((t) => t.trim().toUpperCase())
     .filter(Boolean);
-  if (tokens.length === 0) fail(back, "Pola kosong.");
-  if (tokens.length > 366) fail(back, "Pola terlalu panjang.");
+  if (tokens.length === 0) fail(back, "Pola shift belum diisi.");
+  if (tokens.length > 366) fail(back, "Pola shift terlalu panjang (maksimal 366 kode).");
   const pattern: (string | null)[] = [];
   const unknown: string[] = [];
   for (const t of tokens) {
@@ -152,7 +156,7 @@ const TRANSITIONS: Record<ScheduleStatus, ScheduleStatus[]> = {
 
 const STATUS_MSG: Record<ScheduleStatus, string> = {
   published: "Jadwal dipublikasikan. Anggota tim yang terjadwal sudah dinotifikasi.",
-  draft: "Periode dikembalikan ke draft (tidak terlihat oleh user biasa).",
+  draft: "Periode dikembalikan ke draft dan tidak lagi terlihat oleh anggota tim.",
   archived: "Periode diarsipkan.",
 };
 

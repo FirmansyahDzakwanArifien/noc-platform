@@ -37,7 +37,7 @@ async function createPermit(formData: FormData, submit: boolean) {
   if (!startAt || !endAt) fail(BACK, "Format waktu tidak valid.");
   if (new Date(endAt) <= new Date(startAt)) fail(BACK, "Waktu selesai harus setelah waktu mulai.");
   if (!isPriority(riskLevel)) fail(BACK, "Tingkat risiko tidak valid.");
-  if (permitType === "change_request" && !rollbackPlan) fail(BACK, "Rollback plan wajib diisi untuk Change Request.");
+  if (permitType === "change_request" && !rollbackPlan) fail(BACK, "Rencana rollback wajib diisi untuk Change Request.");
 
   const personnel = [];
   for (let i = 0; i < ROW_COUNT; i++) {
@@ -58,7 +58,7 @@ async function createPermit(formData: FormData, submit: boolean) {
     if (!name) continue;
     const direction = str(formData, `i_direction_${i}`) === "keluar" ? "keluar" : "masuk";
     const qty = num(formData, `i_qty_${i}`) ?? 1;
-    if (!Number.isInteger(qty) || qty < 1) fail(BACK, `Qty barang "${name}" harus bilangan bulat ≥ 1.`);
+    if (!Number.isInteger(qty) || qty < 1) fail(BACK, `Jumlah barang "${name}" minimal 1.`);
     items.push({
       direction,
       name,

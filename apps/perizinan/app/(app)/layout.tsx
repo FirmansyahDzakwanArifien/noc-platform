@@ -7,7 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const nav: NavItem[] = [{ href: "/", label: "Izin Kerja", icon: <FileText />, exact: true }];
   if (auth.can("permit.create")) nav.push({ href: "/baru", label: "Ajukan Izin", icon: <FilePlus /> });
-  if (auth.can("permit.approve")) nav.push({ href: "/approval", label: "Approval Saya", icon: <ClipboardCheck /> });
+  if (auth.can("permit.approve")) nav.push({ href: "/approval", label: "Persetujuan Saya", icon: <ClipboardCheck /> });
   if (auth.can("permit.checkin")) nav.push({ href: "/kunjungan", label: "Kunjungan", icon: <DoorOpen /> });
   if (auth.can("leave.request") || auth.can("leave.approve")) {
     nav.push({ href: "/cuti", label: "Cuti & Tukar Shift", icon: <CalendarDays /> });

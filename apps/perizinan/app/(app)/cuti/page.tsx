@@ -9,6 +9,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  EmptyState,
   Flash,
   Forbidden,
   formatDate,
@@ -25,12 +26,13 @@ import {
   THead,
   TR,
 } from "@noc/ui";
-import { Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { LEAVE_TYPES } from "@/lib/labels";
 import { nameOf, profileNames, type SearchParams } from "@/lib/util";
 import { acceptSwap, cancelLeave, decideLeave } from "./actions";
 
-export const metadata = { title: "Cuti & Izin" };
+export const metadata = { title: "Cuti & Tukar Shift" };
 
 type Row = LeaveRequest & {
   shift_schedules: {
@@ -39,7 +41,8 @@ type Row = LeaveRequest & {
   } | null;
 };
 
-const SELECT = "*, shift_schedules(work_date, shifts(name, start_time, end_time))";
+const SELECT =
+  "id, request_no, user_id, leave_type, start_date, end_date, swap_with, swap_accepted_at, reason, status, approver_id, decided_at, decision_note, shift_schedules(work_date, shifts(name, start_time, end_time))";
 
 export default async function LeavePage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
@@ -57,14 +60,15 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
       .eq("leave_type", "tukar_shift")
       .eq("status", "pending")
       .is("swap_accepted_at", null)
-      .order("start_date"),
+      .order("start_date")
+      .limit(50),
     canApprove
-      ? supabase.from("leave_requests").select(SELECT).eq("status", "pending").neq("user_id", auth.userId).order("start_date")
+      ? supabase.from("leave_requests").select(SELECT).eq("status", "pending").neq("user_id", auth.userId).order("start_date").limit(100)
       : Promise.resolve({ data: [] }),
   ]);
-  const mine = (mineRes.data ?? []) as Row[];
-  const swapForMe = (swapRes.data ?? []) as Row[];
-  const pending = (pendingRes.data ?? []) as Row[];
+  const mine = (mineRes.data ?? []) as unknown as Row[];
+  const swapForMe = (swapRes.data ?? []) as unknown as Row[];
+  const pending = (pendingRes.data ?? []) as unknown as Row[];
 
   if (!canRequest && !canApprove && mine.length === 0 && swapForMe.length === 0) return <Forbidden />;
 
@@ -73,20 +77,28 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
     supabase,
     all.flatMap((r) => [r.user_id, r.swap_with, r.approver_id]),
   );
+  const who = (id: string | null) => {
+    const n = nameOf(names, id, auth.userId);
+    return n === "-" ? "rekan" : n;
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cuti & Izin"
-        description="Cuti, izin, sakit, dinas, dan tukar shift."
+        title="Cuti, Izin & Tukar Shift"
+        description={
+          canApprove
+            ? "Ajukan atau putuskan permintaan cuti, izin, sakit, dinas, dan tukar shift personel NOC."
+            : "Ajukan cuti, izin, sakit, dinas, atau tukar shift, dan pantau status persetujuannya."
+        }
         actions={
           canRequest && (
             <>
               <Link href="/cuti/baru?jenis=tukar_shift" className={buttonClass("secondary")}>
-                Tukar shift
+                <ArrowLeftRight className="size-4" aria-hidden /> Tukar shift
               </Link>
               <Link href="/cuti/baru" className={buttonClass()}>
-                <Plus className="size-4" aria-hidden /> Ajukan
+                <Plus className="size-4" aria-hidden /> Ajukan cuti / izin
               </Link>
             </>
           )
@@ -95,17 +107,16 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
       <Flash searchParams={sp} />
 
       {swapForMe.length > 0 && (
-        <Card>
+        <Card className="border-amber-200">
           <CardHeader>
-            <CardTitle>Permintaan tukar shift untuk saya ({swapForMe.length})</CardTitle>
+            <CardTitle>Rekan meminta Anda menggantikan shift ({swapForMe.length})</CardTitle>
+            <span className="text-xs text-slate-500">Setelah Anda setuju, permintaan diteruskan ke atasan.</span>
           </CardHeader>
           <ul className="divide-y divide-slate-100">
             {swapForMe.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-900">
-                    {nameOf(names, r.user_id)} meminta Anda menggantikan shift
-                  </p>
+                  <p className="font-medium text-slate-900">{who(r.user_id)} meminta Anda menggantikan shift-nya</p>
                   <p className="text-slate-600">
                     <ShiftInfo row={r} />
                   </p>
@@ -113,59 +124,83 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
                 </div>
                 <form action={acceptSwap}>
                   <input type="hidden" name="id" value={r.id} />
-                  <SubmitButton variant="success" size="sm" pendingText="Memproses…">
-                    Setujui tukar shift
-                  </SubmitButton>
+                  <ConfirmSubmit
+                    variant="success"
+                    size="sm"
+                    pendingText="Memproses…"
+                    confirm="Anda bersedia menggantikan shift ini? Persetujuan Anda tidak bisa ditarik kembali."
+                  >
+                    Saya bersedia menggantikan
+                  </ConfirmSubmit>
                 </form>
               </li>
             ))}
           </ul>
+          <CardContent className="border-t border-slate-100 py-3 text-xs text-slate-500">
+            Tidak bisa menggantikan? Hubungi rekan agar membatalkan permintaannya.
+          </CardContent>
         </Card>
       )}
 
       {canApprove && (
         <Card>
           <CardHeader>
-            <CardTitle>Menunggu persetujuan ({pending.length})</CardTitle>
+            <CardTitle>Menunggu keputusan Anda ({pending.length})</CardTitle>
           </CardHeader>
           {pending.length === 0 ? (
-            <CardContent className="text-sm text-slate-500">Tidak ada permintaan yang menunggu.</CardContent>
+            <CardContent className="text-sm text-slate-500">Tidak ada permintaan yang perlu diputuskan.</CardContent>
           ) : (
             <ul className="divide-y divide-slate-100">
               {pending.map((r) => {
                 const waitingPartner = r.leave_type === "tukar_shift" && !r.swap_accepted_at;
                 return (
-                  <li key={r.id} className="space-y-3 px-5 py-4 text-sm">
+                  <li key={r.id} className="space-y-2 px-5 py-4 text-sm">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-slate-900">{nameOf(names, r.user_id)}</span>
                       <Badge tone="purple">{LEAVE_TYPES[r.leave_type] ?? r.leave_type}</Badge>
-                      <span className="font-mono text-xs text-slate-400">{r.request_no}</span>
+                      {r.request_no && <span className="font-mono text-xs text-slate-400">{r.request_no}</span>}
                     </div>
                     <p className="text-slate-600">
                       {r.leave_type === "tukar_shift" ? (
                         <>
-                          <ShiftInfo row={r} /> → digantikan {nameOf(names, r.swap_with)}{" "}
-                          {r.swap_accepted_at ? (
-                            <Badge tone="green">Rekan setuju {formatDateTime(r.swap_accepted_at)}</Badge>
-                          ) : (
-                            <Badge tone="yellow">Menunggu persetujuan rekan</Badge>
-                          )}
+                          <ShiftInfo row={r} /> · digantikan <b className="font-medium">{who(r.swap_with)}</b>
                         </>
                       ) : (
                         <Period row={r} />
                       )}
                     </p>
                     <p className="text-slate-600">Alasan: {r.reason}</p>
-                    <form action={decideLeave} className="flex flex-wrap items-center gap-2">
+                    {r.leave_type === "tukar_shift" &&
+                      (r.swap_accepted_at ? (
+                        <Badge tone="green">Rekan sudah bersedia · {formatDateTime(r.swap_accepted_at)}</Badge>
+                      ) : (
+                        <Badge tone="yellow">Menunggu {who(r.swap_with)} menyetujui tukar shift</Badge>
+                      ))}
+                    <form action={decideLeave} className="flex flex-wrap items-center gap-2 pt-1">
                       <input type="hidden" name="id" value={r.id} />
-                      <Input name="decision_note" placeholder="Catatan (wajib bila menolak)" className="min-w-52 flex-1" aria-label="Catatan keputusan" />
+                      <Input
+                        name="decision_note"
+                        placeholder="Catatan (wajib bila menolak)"
+                        className="min-w-0 flex-1 basis-full sm:basis-52"
+                        aria-label="Catatan keputusan"
+                      />
                       <SubmitButton name="decision" value="approved" variant="success" size="sm" disabled={waitingPartner} pendingText="…">
                         Setujui
                       </SubmitButton>
-                      <SubmitButton name="decision" value="rejected" variant="danger" size="sm" pendingText="…">
+                      <ConfirmSubmit
+                        name="decision"
+                        value="rejected"
+                        variant="danger"
+                        size="sm"
+                        pendingText="…"
+                        confirm="Tolak permintaan ini?"
+                      >
                         Tolak
-                      </SubmitButton>
+                      </ConfirmSubmit>
                     </form>
+                    {waitingPartner && (
+                      <p className="text-xs text-slate-500">Tombol Setujui aktif setelah rekan pengganti menyatakan bersedia.</p>
+                    )}
                   </li>
                 );
               })}
@@ -175,71 +210,87 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
       )}
 
       {(canRequest || mine.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Permintaan saya</CardTitle>
-          </CardHeader>
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold text-slate-900">Permintaan saya</h2>
           {mine.length === 0 ? (
-            <CardContent className="text-sm text-slate-500">Belum ada permintaan.</CardContent>
+            <EmptyState
+              title="Belum ada permintaan"
+              description="Ajukan cuti, izin, sakit, atau dinas; atau minta rekan menggantikan shift Anda."
+              action={
+                canRequest && (
+                  <Link href="/cuti/baru" className={buttonClass()}>
+                    <Plus className="size-4" aria-hidden /> Ajukan cuti / izin
+                  </Link>
+                )
+              }
+            />
           ) : (
-            <Table>
-              <THead>
-                <tr>
-                  <TH>No</TH>
-                  <TH>Jenis</TH>
-                  <TH>Tanggal</TH>
-                  <TH>Keterangan</TH>
-                  <TH>Status</TH>
-                  <TH />
-                </tr>
-              </THead>
-              <TBody>
-                {mine.map((r) => (
-                  <TR key={r.id}>
-                    <TD className="whitespace-nowrap font-mono text-xs">{r.request_no ?? "-"}</TD>
-                    <TD className="whitespace-nowrap">{LEAVE_TYPES[r.leave_type] ?? r.leave_type}</TD>
-                    <TD className="whitespace-nowrap">
-                      {r.leave_type === "tukar_shift" ? <ShiftInfo row={r} /> : <Period row={r} />}
-                    </TD>
-                    <TD className="min-w-48">
-                      <p>{r.reason}</p>
-                      {r.leave_type === "tukar_shift" && (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Rekan: {nameOf(names, r.swap_with)} ·{" "}
-                          {r.swap_accepted_at ? "sudah setuju" : "belum menyetujui"}
-                        </p>
-                      )}
-                      {r.decision_note && (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Catatan {nameOf(names, r.approver_id)}: {r.decision_note}
-                        </p>
-                      )}
-                    </TD>
-                    <TD>
-                      <StatusBadge status={r.status} />
-                    </TD>
-                    <TD className="text-right">
-                      {r.status === "pending" && (
-                        <form action={cancelLeave}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <SubmitButton variant="ghost" size="sm" pendingText="…">
-                            Batalkan
-                          </SubmitButton>
-                        </form>
-                      )}
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
+            <Card>
+              <Table>
+                <THead>
+                  <tr>
+                    <TH>Permintaan</TH>
+                    <TH className="hidden md:table-cell">Keterangan</TH>
+                    <TH>Status</TH>
+                    <TH />
+                  </tr>
+                </THead>
+                <TBody>
+                  {mine.map((r) => (
+                    <TR key={r.id}>
+                      <TD>
+                        <span className="font-medium text-slate-900">{LEAVE_TYPES[r.leave_type] ?? r.leave_type}</span>
+                        <span className="block text-xs text-slate-600">
+                          {r.leave_type === "tukar_shift" ? <ShiftInfo row={r} /> : <Period row={r} />}
+                        </span>
+                        {r.request_no && <span className="block font-mono text-xs text-slate-400">{r.request_no}</span>}
+                        <span className="mt-1 block text-xs text-slate-500 md:hidden">{r.reason}</span>
+                      </TD>
+                      <TD className="hidden min-w-48 md:table-cell">
+                        <p>{r.reason}</p>
+                        {r.leave_type === "tukar_shift" && <p className="mt-1 text-xs text-slate-500">Pengganti: {who(r.swap_with)}</p>}
+                        {r.decision_note && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            Catatan {nameOf(names, r.approver_id) === "-" ? "atasan" : nameOf(names, r.approver_id)}: {r.decision_note}
+                          </p>
+                        )}
+                      </TD>
+                      <TD>
+                        <StatusBadge status={r.status} />
+                        {r.status === "pending" && (
+                          <span className="mt-1 block text-xs text-slate-500">
+                            {r.leave_type === "tukar_shift" && !r.swap_accepted_at
+                              ? `Menunggu ${who(r.swap_with)} menyetujui tukar shift`
+                              : "Menunggu persetujuan atasan"}
+                          </span>
+                        )}
+                        {r.decision_note && (
+                          <span className="mt-1 block text-xs text-slate-500 md:hidden">Catatan: {r.decision_note}</span>
+                        )}
+                      </TD>
+                      <TD className="text-right">
+                        {r.status === "pending" && (
+                          <form action={cancelLeave}>
+                            <input type="hidden" name="id" value={r.id} />
+                            <ConfirmSubmit variant="ghost" size="sm" pendingText="…" confirm="Batalkan permintaan ini?">
+                              Batalkan
+                            </ConfirmSubmit>
+                          </form>
+                        )}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </Card>
           )}
-        </Card>
+        </div>
       )}
     </div>
   );
 }
 
-function Period({ row }: { row: LeaveRequest }) {
+function Period({ row }: { row: Pick<LeaveRequest, "start_date" | "end_date"> }) {
   return row.start_date === row.end_date ? (
     <>{formatDate(row.start_date)}</>
   ) : (

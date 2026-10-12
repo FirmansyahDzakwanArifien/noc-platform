@@ -40,6 +40,6 @@ export async function createProject(formData: FormData) {
     .insert({ project_id: data.id, user_id: auth.userId, role: "lead" });
 
   revalidatePath("/");
-  const msg = memberError ? "Project dibuat, tetapi gagal menambahkan Anda sebagai lead." : "Project dibuat.";
+  const msg = memberError ? "Project dibuat, tetapi gagal menambahkan Anda sebagai ketua project." : "Project dibuat.";
   redirect(`/${data.id}?${new URLSearchParams({ [memberError ? "error" : "success"]: msg })}`);
 }

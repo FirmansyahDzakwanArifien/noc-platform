@@ -9,6 +9,7 @@ import {
   Flash,
   Forbidden,
   formatDate,
+  formatDateTime,
   PageHeader,
   Select,
   StatusBadge,
@@ -27,7 +28,10 @@ import { updateItemStatus } from "../[id]/actions";
 
 export const metadata = { title: "Item Terbuka" };
 
-type OpenItem = HandoverItem & { handover_no: string | null; shift_date: string; site_id: string | null };
+type OpenItem = Pick<
+  HandoverItem,
+  "id" | "handover_id" | "category" | "title" | "description" | "priority" | "status" | "ref_ticket" | "carried_from" | "due_at"
+> & { handover_no: string | null; shift_date: string; site_id: string | null };
 
 const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -44,7 +48,8 @@ export default async function OpenItemsPage({
   const priority = first(sp.priority) ?? "";
 
   const supabase = await createClient();
-  let q = supabase.from("v_open_handover_items").select("*").order("shift_date", { ascending: false }).limit(300);
+  let q = supabase.from("v_open_handover_items").select("id, handover_id, category, title, description, priority, status, ref_ticket, carried_from, due_at, handover_no, shift_date, site_id")
+    .order("shift_date", { ascending: false }).limit(300);
   if (isOneOf(CATEGORIES, category)) q = q.eq("category", category);
   if (isOneOf(PRIORITIES, priority)) q = q.eq("priority", priority);
   const [{ data }, sites] = await Promise.all([q, loadSites(supabase)]);
@@ -56,15 +61,20 @@ export default async function OpenItemsPage({
     .filter((i) => !carriedIds.has(i.id))
     .sort((a, b) => (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9) || b.shift_date.localeCompare(a.shift_date));
   const canUpdate = auth.can("handover.create");
+  const filtered = !!(category || priority);
+  const now = Date.now();
   const back = `/item-terbuka${category || priority ? `?${new URLSearchParams({ category, priority }).toString()}` : ""}`;
 
   return (
     <div>
-      <PageHeader title="Item Terbuka" description="Butir handover yang masih open / sedang dikerjakan." />
+      <PageHeader
+        title="Item Terbuka"
+        description="Semua item handover yang belum selesai (Open / Dikerjakan), diurutkan dari prioritas tertinggi."
+      />
       <Flash searchParams={sp} />
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
-        <div className="w-48">
+      <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-48">
           <Select name="category" defaultValue={category} aria-label="Kategori">
             <option value="">Semua kategori</option>
             {CATEGORIES.map((c) => (
@@ -74,7 +84,7 @@ export default async function OpenItemsPage({
             ))}
           </Select>
         </div>
-        <div className="w-40">
+        <div className="w-full sm:w-40">
           <Select name="priority" defaultValue={priority} aria-label="Prioritas">
             <option value="">Semua prioritas</option>
             {PRIORITIES.map((p) => (
@@ -85,50 +95,89 @@ export default async function OpenItemsPage({
           </Select>
         </div>
         <button type="submit" className={buttonClass("secondary")}>
-          Filter
+          Terapkan
         </button>
+        {filtered && (
+          <Link href="/item-terbuka" className={buttonClass("ghost")}>
+            Reset
+          </Link>
+        )}
       </form>
 
       {rows.length === 0 ? (
-        <EmptyState title="Tidak ada item terbuka" description="Semua butir handover sudah selesai." />
+        filtered ? (
+          <EmptyState
+            title="Tidak ada item yang cocok"
+            description="Tidak ada item terbuka untuk kategori/prioritas ini."
+            action={
+              <Link href="/item-terbuka" className={buttonClass("secondary")}>
+                Reset filter
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="Tidak ada item terbuka"
+            description="Semua item handover sudah selesai. Item baru muncul di sini saat ditambahkan ke handover dengan status Open atau Dikerjakan."
+          />
+        )
       ) : (
         <Card>
           <Table>
             <THead>
               <TR>
                 <TH>Item</TH>
-                <TH>Kategori</TH>
-                <TH>Prioritas</TH>
-                <TH>Handover</TH>
-                <TH>Site</TH>
+                <TH className="hidden md:table-cell">Kategori</TH>
+                <TH className="hidden sm:table-cell">Prioritas</TH>
+                <TH className="hidden md:table-cell">Handover</TH>
+                <TH className="hidden lg:table-cell">Site</TH>
                 <TH>Status</TH>
               </TR>
             </THead>
             <TBody>
               {rows.map((it) => (
                 <TR key={it.id}>
-                  <TD className="min-w-56">
-                    <p className="font-medium text-slate-900">{it.title}</p>
-                    {it.description && <p className="line-clamp-2 text-xs text-slate-500">{it.description}</p>}
-                    {it.ref_ticket && <p className="text-xs text-slate-500">Tiket: {it.ref_ticket}</p>}
+                  <TD className="sm:min-w-56">
+                    <p className="break-words font-medium text-slate-900">{it.title}</p>
+                    {it.description && <p className="line-clamp-2 break-words text-xs text-slate-500">{it.description}</p>}
+                    <p className="flex flex-wrap gap-x-2 text-xs text-slate-500">
+                      {it.ref_ticket && <span>Tiket eksternal: {it.ref_ticket}</span>}
+                      {it.due_at && (
+                        <span className={new Date(it.due_at).getTime() < now ? "font-medium text-red-700" : undefined}>
+                          Tenggat: {formatDateTime(it.due_at)}
+                          {new Date(it.due_at).getTime() < now && " (lewat)"}
+                        </span>
+                      )}
+                    </p>
+                    {/* Ringkasan untuk layar kecil (kolom lain disembunyikan) */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 md:hidden">
+                      <span className="sm:hidden">
+                        <StatusBadge status={it.priority} />
+                      </span>
+                      <span>{categoryLabel(it.category)}</span>
+                      <span>·</span>
+                      <Link href={`/${it.handover_id}`} className="text-brand-600 hover:underline">
+                        {it.handover_no ?? "Handover"}
+                      </Link>
+                    </div>
                   </TD>
-                  <TD className="whitespace-nowrap">{categoryLabel(it.category)}</TD>
-                  <TD>
+                  <TD className="hidden whitespace-nowrap md:table-cell">{categoryLabel(it.category)}</TD>
+                  <TD className="hidden sm:table-cell">
                     <StatusBadge status={it.priority} />
                   </TD>
-                  <TD className="whitespace-nowrap">
+                  <TD className="hidden whitespace-nowrap md:table-cell">
                     <Link href={`/${it.handover_id}`} className="text-brand-600 hover:underline">
                       {it.handover_no ?? "Handover"}
                     </Link>
                     <p className="text-xs text-slate-500">{formatDate(it.shift_date)}</p>
                   </TD>
-                  <TD>{sites.name(it.site_id)}</TD>
+                  <TD className="hidden lg:table-cell">{sites.name(it.site_id)}</TD>
                   <TD>
                     {canUpdate ? (
                       <form action={updateItemStatus}>
                         <input type="hidden" name="item_id" value={it.id} />
                         <input type="hidden" name="back" value={back} />
-                        <AutoSubmitSelect name="status" defaultValue={it.status} aria-label="Status item" className="h-8 w-36 text-xs">
+                        <AutoSubmitSelect name="status" defaultValue={it.status} aria-label={`Status item ${it.title}`} className="h-8 w-32 text-xs sm:w-36">
                           {ITEM_STATUSES.map((s) => (
                             <option key={s.value} value={s.value}>
                               {s.label}

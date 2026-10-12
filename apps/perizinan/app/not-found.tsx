@@ -7,8 +7,9 @@ export default function NotFound() {
       <div>
         <p className="text-sm font-semibold text-brand-600">404</p>
         <h1 className="mt-1 text-xl font-semibold text-slate-900">Halaman tidak ditemukan</h1>
+        <p className="mt-1 text-sm text-slate-500">Izin mungkin sudah dihapus, atau Anda tidak memiliki akses ke izin ini.</p>
         <Link href="/" className={buttonClass("secondary", "md", "mt-4")}>
-          Kembali
+          Kembali ke daftar izin
         </Link>
       </div>
     </div>

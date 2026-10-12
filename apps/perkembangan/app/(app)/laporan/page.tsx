@@ -18,13 +18,17 @@ import {
   PageHeader,
   Select,
 } from "@noc/ui";
-import { addDays, first, isDateStr, isUuid, loadProfiles, todayWIB } from "@/lib/data";
+import { addDays, first, formatLongDate, isDateStr, isUuid, todayWIB } from "@/lib/data";
 
 export const metadata = { title: "Laporan" };
 
-type UpdateRow = ProgressUpdate & {
-  projects: Pick<Project, "id" | "code" | "name"> | null;
+type UpdateRow = Pick<
+  ProgressUpdate,
+  "id" | "project_id" | "reported_by" | "report_date" | "progress_pct" | "content" | "blockers" | "next_plan"
+> & {
+  projects: Pick<Project, "code" | "name"> | null;
   project_tasks: Pick<ProjectTask, "title"> | null;
+  profiles: { full_name: string } | null;
 };
 
 const LIMIT = 500;
@@ -35,7 +39,7 @@ export default async function ReportPage({
   searchParams: Promise<{ dari?: string; sampai?: string; project?: string; error?: string; success?: string }>;
 }) {
   const sp = await searchParams;
-  await requireAuth();
+  const auth = await requireAuth();
   const supabase = await createClient();
 
   const today = todayWIB();
@@ -49,7 +53,9 @@ export default async function ReportPage({
 
   let query = supabase
     .from("progress_updates")
-    .select("*, projects(id, code, name), project_tasks(title)")
+    .select(
+      "id, project_id, reported_by, report_date, progress_pct, content, blockers, next_plan, projects(code, name), project_tasks(title), profiles(full_name)",
+    )
     .gte("report_date", from)
     .lte("report_date", to)
     .order("report_date", { ascending: false })
@@ -57,12 +63,11 @@ export default async function ReportPage({
     .limit(LIMIT);
   if (projectId) query = query.eq("project_id", projectId);
 
-  const [{ data, error }, { data: projectData }, profiles] = await Promise.all([
+  const [{ data, error }, { data: projectData }] = await Promise.all([
     query,
-    supabase.from("projects").select("id, code, name").order("name"),
-    loadProfiles(supabase),
+    supabase.from("projects").select("id, code, name").order("name").limit(1000),
   ]);
-  const rows = (data ?? []) as UpdateRow[];
+  const rows = (data ?? []) as unknown as UpdateRow[];
   const projects = (projectData ?? []) as Pick<Project, "id" | "code" | "name">[];
 
   // Kelompokkan per tanggal laporan (urutan sudah terbaru dulu).
@@ -83,7 +88,10 @@ export default async function ReportPage({
 
   return (
     <div>
-      <PageHeader title="Laporan" description="Rekap laporan progress semua project untuk laporan harian / mingguan." />
+      <PageHeader
+        title="Laporan"
+        description="Rekap laporan progress dari semua project per tanggal — untuk bahan laporan harian atau mingguan."
+      />
       <Flash searchParams={sp} />
 
       <Card className="mb-6">
@@ -93,7 +101,7 @@ export default async function ReportPage({
               <Input type="date" name="dari" defaultValue={from} max={today} />
             </Field>
             <Field label="Sampai">
-              <Input type="date" name="sampai" defaultValue={to} />
+              <Input type="date" name="sampai" defaultValue={to} max={today} />
             </Field>
             <Field label="Project">
               <Select name="project" defaultValue={projectId}>
@@ -130,9 +138,22 @@ export default async function ReportPage({
       </div>
 
       {error ? (
-        <EmptyState title="Gagal memuat laporan" description={error.message} />
+        <EmptyState
+          title="Gagal memuat laporan"
+          description={`Muat ulang halaman ini. Bila masih gagal, hubungi admin. (${error.message})`}
+        />
       ) : rows.length === 0 ? (
-        <EmptyState title="Tidak ada laporan" description={`Belum ada laporan progress pada ${formatDate(from)} – ${formatDate(to)}.`} />
+        <EmptyState
+          title="Tidak ada laporan pada periode ini"
+          description={`Belum ada laporan progress pada ${formatDate(from)} – ${formatDate(to)}. Coba perluas rentang tanggal${
+            projectId ? " atau pilih semua project" : ""
+          }.${auth.can("progress.report") ? " Laporan dikirim dari halaman detail project." : ""}`}
+          action={
+            <Link href={presetHref(addDays(today, -29), today)} className={buttonClass("secondary")}>
+              Lihat 30 hari terakhir
+            </Link>
+          }
+        />
       ) : (
         <div className="space-y-6">
           {rows.length >= LIMIT && (
@@ -158,9 +179,13 @@ export default async function ReportPage({
                           <span className="font-medium text-slate-900">Project</span>
                         )}
                         <span className="text-slate-400">·</span>
-                        <span className="text-slate-700">{profiles.name(u.reported_by)}</span>
-                        {u.project_tasks && <Badge tone="blue">{u.project_tasks.title}</Badge>}
-                        {u.progress_pct !== null && <Badge tone="green">{Number(u.progress_pct).toFixed(0)}%</Badge>}
+                        <span className="text-slate-700">oleh {u.profiles?.full_name ?? "—"}</span>
+                        {u.project_tasks && (
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-200 [overflow-wrap:anywhere]">
+                            Task: {u.project_tasks.title}
+                          </span>
+                        )}
+                        {u.progress_pct !== null && <Badge tone="green">Progress {Number(u.progress_pct).toFixed(0)}%</Badge>}
                       </div>
                       <p className="mt-1.5 whitespace-pre-line text-sm text-slate-700">{u.content}</p>
                       {u.blockers && (
@@ -171,7 +196,7 @@ export default async function ReportPage({
                       )}
                       {u.next_plan && (
                         <p className="mt-2 whitespace-pre-line text-sm text-slate-600">
-                          <span className="font-medium text-slate-700">Rencana: </span>
+                          <span className="font-medium text-slate-700">Rencana berikutnya: </span>
                           {u.next_plan}
                         </p>
                       )}
@@ -194,15 +219,4 @@ function Stat({ label, value, danger }: { label: string; value: number; danger?:
       <p className="mt-1 text-xs text-slate-500">{label}</p>
     </div>
   );
-}
-
-/** "2026-10-12" → "Senin, 12 Oktober 2026" */
-function formatLongDate(date: string) {
-  return new Date(date + "T00:00:00Z").toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }

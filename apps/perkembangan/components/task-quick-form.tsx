@@ -12,7 +12,7 @@ export function TaskQuickForm({
   back: string;
 }) {
   return (
-    <form action={quickUpdateTask} className="flex items-center gap-1.5">
+    <form action={quickUpdateTask} className="flex flex-wrap items-center gap-1.5">
       <input type="hidden" name="task_id" value={task.id} />
       <input type="hidden" name="back" value={back} />
       <input type="hidden" name="prev_status" value={task.status} />
@@ -30,7 +30,7 @@ export function TaskQuickForm({
         max={100}
         step={1}
         defaultValue={Number(task.progress_pct)}
-        aria-label="Progress %"
+        aria-label="Progress (%)"
         className="h-8 w-16 rounded-lg border border-slate-300 bg-white px-2 text-xs tabular-nums shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
       />
       <span className="text-xs text-slate-400">%</span>
