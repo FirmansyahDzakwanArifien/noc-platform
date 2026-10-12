@@ -41,6 +41,7 @@ export type Team = { id: string; name: string; description: string | null };
 export type Vendor = {
   id: string;
   name: string;
+  npwp: string | null;
   pic_name: string | null;
   pic_phone: string | null;
   pic_email: string | null;

@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (auth.can("user.manage") || auth.can("role.manage")) {
     nav.push({ href: "/admin/roles", label: "Role & Akses", icon: <ShieldCheck /> });
   }
-  if (auth.can("master.manage")) nav.push({ href: "/admin/master", label: "Master Data", icon: <Database /> });
+  if (auth.can("portal.access")) nav.push({ href: "/admin/master", label: "Master Data", icon: <Database /> });
   if (auth.can("audit.view")) nav.push({ href: "/admin/audit", label: "Audit Log", icon: <History /> });
 
   return (

@@ -60,6 +60,7 @@ Permission disimpan di database (`roles`, `permissions`, `role_permissions`, `us
 | `portal.access` | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | `user.manage` · `role.manage` · `audit.view` | ✅ | | | | | |
 | `master.manage` | ✅ | ✅ | | | | |
+| `master.delete` | ✅ | | | | | |
 | `announcement.manage` | ✅ | ✅ | ✅ | | | |
 | **`schedule.view`** | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | **`schedule.manage`** | ✅ | ✅ | ✅ | | | |
