@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-semibold text-slate-900">Lupa password</h1>
+      <h1 className="font-display text-2xl font-extrabold tracking-tight text-slate-900">Lupa password</h1>
       {sent ? (
         <Alert tone="success">Jika email terdaftar, link untuk mengatur ulang password sudah dikirim.</Alert>
       ) : (

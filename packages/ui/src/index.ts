@@ -12,3 +12,4 @@ export { Alert } from "./components/alert";
 export { Flash } from "./components/flash";
 export { ProgressBar } from "./components/progress-bar";
 export { formatDate, formatDateTime, formatTime, toDateInput, toDateTimeInput } from "./format";
+export { Logo, LogoMark } from "./components/logo";

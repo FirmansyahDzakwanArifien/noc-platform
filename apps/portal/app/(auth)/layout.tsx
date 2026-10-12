@@ -1,14 +1,109 @@
+import { Logo } from "@noc/ui";
+import { ArrowLeftRight, CalendarDays, FileCheck2, ShieldCheck, TrendingUp } from "lucide-react";
+import { LiveClock } from "../../components/live-clock";
+
+const MODULES = [
+  { icon: CalendarDays, name: "Jadwal", desc: "Roster shift & tukar shift" },
+  { icon: ArrowLeftRight, name: "Handover", desc: "Serah terima antar shift" },
+  { icon: FileCheck2, name: "Perizinan", desc: "Izin kerja, akses & cuti" },
+  { icon: TrendingUp, name: "Perkembangan", desc: "Project & progress tim" },
+];
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-b from-brand-50 to-slate-50 px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <span className="grid size-12 place-items-center rounded-xl bg-brand-600 text-sm font-bold text-white shadow-sm">NOC</span>
-          <p className="mt-3 text-lg font-semibold text-slate-900">NOC Platform</p>
-          <p className="text-sm text-slate-500">Jadwal · Handover · Perizinan · Perkembangan</p>
+    <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
+      {/* Panel brand */}
+      <aside className="relative hidden overflow-hidden bg-slate-950 text-white lg:flex lg:flex-col">
+        {/* grid jaringan */}
+        <svg className="absolute inset-0 size-full opacity-[0.07]" aria-hidden>
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M40 0H0V40" fill="none" stroke="white" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+        <div className="absolute -left-24 top-1/4 size-96 animate-float rounded-full bg-brand-600/30 blur-3xl" aria-hidden />
+        <div
+          className="absolute -right-20 bottom-10 size-80 animate-float rounded-full bg-brand-900/40 blur-3xl [animation-delay:-4s]"
+          aria-hidden
+        />
+
+        {/* garis denyut monitoring */}
+        <svg viewBox="0 0 600 120" className="absolute inset-x-0 top-[58%] w-full opacity-60" preserveAspectRatio="none" aria-hidden>
+          <path
+            d="M0 60 H170 L190 60 L205 25 L225 100 L245 40 L258 60 H380 L395 60 L408 35 L425 85 L438 60 H600"
+            fill="none"
+            stroke="url(#pulse)"
+            strokeWidth="2"
+            strokeDasharray="200 200"
+            className="animate-pulse-line"
+          />
+          <defs>
+            <linearGradient id="pulse" x1="0" x2="1">
+              <stop offset="0" stopColor="#ef4444" stopOpacity="0" />
+              <stop offset="0.5" stopColor="#ef4444" />
+              <stop offset="1" stopColor="#ef4444" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <div className="relative flex flex-1 flex-col p-10 xl:p-14">
+          <div className="flex items-center justify-between">
+            <Logo tone="dark" />
+            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 backdrop-blur">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+              </span>
+              <LiveClock />
+            </span>
+          </div>
+
+          <div className="mt-auto max-w-lg">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-400">Network Operations Center</p>
+            <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.1] tracking-tight xl:text-5xl">
+              Satu pusat kendali untuk <span className="text-brand-500">operasional</span> NOC.
+            </h1>
+            <p className="mt-4 text-base text-slate-400">
+              Jadwal shift, serah terima, perizinan site, dan progres project tim — semuanya terhubung dalam satu akun.
+            </p>
+
+            <div className="mt-10 grid grid-cols-2 gap-3">
+              {MODULES.map((m, i) => (
+                <div
+                  key={m.name}
+                  className="animate-fade-up rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur transition hover:border-brand-500/50 hover:bg-white/[0.07]"
+                  style={{ animationDelay: `${150 + i * 90}ms` }}
+                >
+                  <m.icon className="size-5 text-brand-400" aria-hidden />
+                  <p className="mt-3 text-sm font-semibold">{m.name}</p>
+                  <p className="text-xs text-slate-400">{m.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="mt-10 flex items-center gap-2 text-xs text-slate-500">
+            <ShieldCheck className="size-4" aria-hidden /> Akses khusus karyawan PT Jarvis Integrasi Solusi
+          </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">{children}</div>
-      </div>
+      </aside>
+
+      {/* Form */}
+      <main className="relative flex items-center justify-center bg-white px-5 py-10 sm:px-10">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-brand-50 to-transparent lg:hidden"
+          aria-hidden
+        />
+        <div className="relative w-full max-w-sm animate-fade-up">
+          <div className="mb-8 lg:hidden">
+            <Logo />
+          </div>
+          {children}
+          <p className="mt-10 text-center text-xs text-slate-400">© {new Date().getFullYear()} Jarvis NOC</p>
+        </div>
+      </main>
     </div>
   );
 }

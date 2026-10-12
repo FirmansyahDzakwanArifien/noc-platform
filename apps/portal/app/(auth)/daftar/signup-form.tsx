@@ -55,7 +55,7 @@ export function SignupForm({ next }: { next: string }) {
   if (sentTo) {
     return (
       <div className="space-y-4">
-        <h1 className="text-lg font-semibold text-slate-900">Cek email Anda</h1>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-slate-900">Cek email Anda</h1>
         <p className="text-sm text-slate-600">
           Link verifikasi sudah dikirim ke <span className="font-medium">{sentTo}</span>. Klik link tersebut untuk mengaktifkan akun.
         </p>
@@ -69,7 +69,7 @@ export function SignupForm({ next }: { next: string }) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">Daftar akun</h1>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-slate-900">Daftar akun</h1>
         <p className="mt-1 text-xs text-slate-500">
           Khusus email {ALLOWED_SIGNUP_DOMAINS.map((d) => "@" + d).join(" / ")}. Role awal: viewer, admin akan menyesuaikan akses Anda.
         </p>

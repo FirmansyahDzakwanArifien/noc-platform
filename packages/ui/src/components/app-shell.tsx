@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { APPS, type AppKey } from "@noc/supabase/apps";
 import { ChevronDown, LayoutGrid, LogOut } from "lucide-react";
 import { cn } from "../cn";
+import { Logo, LogoMark } from "./logo";
 import { NavLinks, type NavItem } from "./nav-links";
 
 export type { NavItem };
@@ -41,9 +42,11 @@ export function AppShell({
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
-          <a href={APPS[0].url} className="flex items-center gap-2 font-semibold text-slate-900">
-            <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white">NOC</span>
+          <a href={APPS[0].url} className="flex items-center gap-2 pr-1" aria-label="Jarvis NOC">
+            <LogoMark className="size-8 sm:hidden" />
+            <Logo subtitle={false} className="hidden sm:inline-flex [&_svg]:size-8" />
           </a>
+          <span className="hidden h-6 w-px bg-slate-200 sm:block" />
 
           {/* App switcher */}
           <details className="group relative">
@@ -78,7 +81,7 @@ export function AppShell({
           {/* User menu */}
           <details className="group relative">
             <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg p-1 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
-              <span className="grid size-8 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+              <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 text-xs font-semibold text-white shadow-sm">
                 {initials || "?"}
               </span>
               <span className="hidden max-w-40 truncate text-sm font-medium text-slate-700 sm:block">{user.name}</span>
