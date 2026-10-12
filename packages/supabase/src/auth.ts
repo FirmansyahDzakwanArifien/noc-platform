@@ -17,10 +17,11 @@ export type Auth = {
 /** User yang sedang login + permission-nya. Di-cache per request. */
 export const getAuth = cache(async (): Promise<Auth | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // JWT diverifikasi lokal (ES256 + JWKS), tidak memanggil server Auth seperti getUser().
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  const user = { id: claims.sub, email: (claims.email as string | undefined) ?? "" };
 
   const [{ data: profile }, { data: perms }, { data: roleRows }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),

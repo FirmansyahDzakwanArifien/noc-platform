@@ -28,9 +28,10 @@ export async function updateSession(request: NextRequest, opts: Options = {}) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims: refresh session bila perlu, lalu verifikasi JWT (ES256) secara lokal via JWKS —
+  // tanpa round-trip ke server Auth di setiap request.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub;
 
   const path = request.nextUrl.pathname;
   const isPublic = (opts.publicPaths ?? []).some((p) => path === p || path.startsWith(p + "/"));
