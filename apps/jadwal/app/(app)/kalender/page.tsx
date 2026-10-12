@@ -3,7 +3,7 @@ import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
 import type { SchedulePeriod, Shift } from "@noc/supabase/types";
 import { Alert, buttonClass, Card, cn, EmptyState, Flash, Forbidden, formatTime, PageHeader, Select, StatusBadge } from "@noc/ui";
-import { Pencil, Star } from "lucide-react";
+import { Pencil, Share2, Star } from "lucide-react";
 import { dateRange, dayLabel, dayNumber, isWeekend, MONTH_NAMES, rangeLabel, todayWib } from "@/lib/dates";
 import { shiftStyle, UUID_RE } from "@/lib/shift";
 
@@ -134,9 +134,17 @@ export default async function TeamCalendarPage({ searchParams }: { searchParams:
         description="Lihat siapa bertugas di shift apa pada setiap tanggal."
         actions={
           canManage ? (
-            <Link href={`/kelola/${period.id}`} className={buttonClass("secondary")}>
-              <Pencil className="size-4" aria-hidden /> Ubah jadwal periode ini
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/bagikan?${new URLSearchParams({ dari: period.start_date, sampai: period.end_date, judul: period.name })}`}
+                className={buttonClass("secondary")}
+              >
+                <Share2 className="size-4" aria-hidden /> Bagikan
+              </Link>
+              <Link href={`/kelola/${period.id}`} className={buttonClass("secondary")}>
+                <Pencil className="size-4" aria-hidden /> Ubah jadwal periode ini
+              </Link>
+            </div>
           ) : undefined
         }
       />

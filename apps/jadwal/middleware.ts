@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { updateSession } from "@noc/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  return updateSession(request);
+  return updateSession(request, { publicPaths: ["/s"] });
 }
 
 export const config = {

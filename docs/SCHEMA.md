@@ -113,6 +113,7 @@ Admin / Supervisor / Lead                       Staff / Viewer
 | `shifts` | Master shift. Seed: Pagi 07–15, Siang 15–23, Malam 23–07, OFF (libur). Ada warna untuk kalender. |
 | `schedule_periods` | Periode roster (per tim/site), status `draft → published → archived`. |
 | `shift_schedules` | Isi roster: tanggal × shift × user. Tanggal wajib di dalam rentang periode. |
+| `schedule_shares` | Link publik jadwal (token UUID) untuk rentang tanggal + filter tim opsional, bisa kedaluwarsa/dicabut. Dibaca anon hanya lewat RPC `get_shared_schedule(token)` — hanya periode published, hanya nama + shift. |
 
 Views: `v_my_schedule` (jadwal user yang login), `v_schedule_calendar` (kalender tim).
 
