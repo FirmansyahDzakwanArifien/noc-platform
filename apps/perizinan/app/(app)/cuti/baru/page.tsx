@@ -51,7 +51,7 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
   let colleagues: { id: string; full_name: string }[] = [];
   if (isSwap) {
     const supabase = await createClient();
-    const [s, p] = await Promise.all([
+    const [s, p, x] = await Promise.all([
       supabase
         .from("v_my_schedule")
         .select("id, work_date, shift_name, start_time, end_time, site_name")
@@ -66,9 +66,12 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
         .is("vendor_id", null)
         .neq("id", auth.userId)
         .order("full_name"),
+      supabase.rpc("unschedulable_users"),
     ]);
     schedules = (s.data ?? []) as MySchedule[];
-    colleagues = (p.data ?? []) as { id: string; full_name: string }[];
+    // Administrator/Supervisor tidak masuk jadwal, jadi tidak bisa jadi rekan tukar shift.
+    const excluded = new Set((x.data as string[] | null) ?? []);
+    colleagues = ((p.data ?? []) as { id: string; full_name: string }[]).filter((c) => !excluded.has(c.id));
   }
 
   return (

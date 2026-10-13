@@ -47,6 +47,7 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
               {r.name} <span className="text-xs font-normal text-slate-400">rank {r.rank}</span>
             </p>
             <p className="text-xs text-slate-500">{r.description}</p>
+            {!r.in_schedule && <p className="mt-1 text-xs font-medium text-amber-700">Tidak masuk jadwal shift</p>}
           </div>
         ))}
       </div>

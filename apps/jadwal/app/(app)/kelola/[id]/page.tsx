@@ -62,17 +62,21 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
   const selfPath = qs(extra);
 
   const supabase = await createClient();
-  const [{ data: periodData }, { data: shiftData }, { data: profileData }, cells] = await Promise.all([
+  const [{ data: periodData }, { data: shiftData }, { data: profileData }, cells, { data: excludedData }] = await Promise.all([
     supabase.from("schedule_periods").select("id, name, start_date, end_date, status, team_id, notes, published_at, teams(name), sites(name)").eq("id", id).maybeSingle(),
     supabase.from("shifts").select("id, code, name, color, is_active").order("sort_order"),
     supabase.from("profiles").select("id, full_name, team_id, is_active").order("full_name"),
     fetchPeriodCells(supabase, id),
+    supabase.rpc("unschedulable_users"),
   ]);
   const period = periodData as unknown as PeriodRow | null;
   if (!period) notFound();
 
   const allShifts = (shiftData as ShiftLite[] | null) ?? [];
-  const profiles = (profileData as ProfileLite[] | null) ?? [];
+  // Administrator/Supervisor tidak masuk jadwal shift.
+  const excluded = new Set((excludedData as string[] | null) ?? []);
+  const allProfiles = (profileData as ProfileLite[] | null) ?? [];
+  const profiles = allProfiles.filter((p) => !excluded.has(p.id));
   const existing = cells.data;
 
   // ---- sel yang sudah ada ----
@@ -90,11 +94,11 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
   const shiftById = new Map(allShifts.map((s) => [s.id, s]));
 
   // ---- baris user ----
-  const profileById = new Map(profiles.map((p) => [p.id, p]));
+  const profileById = new Map(allProfiles.map((p) => [p.id, p]));
   const baseIds = profiles
     .filter((p) => p.is_active && (showAll || !period.team_id || p.team_id === period.team_id))
     .map((p) => p.id);
-  const rowIds = [...new Set([...baseIds, ...scheduledUsers, ...extra])];
+  const rowIds = [...new Set([...baseIds, ...scheduledUsers, ...extra.filter((u) => !excluded.has(u))])];
   const rows = rowIds
     .map((uid) => ({ id: uid, name: profileById.get(uid)?.full_name ?? "(Pengguna tidak dikenal)", active: profileById.get(uid)?.is_active ?? false }))
     .sort((a, b) => a.name.localeCompare(b.name, "id"));

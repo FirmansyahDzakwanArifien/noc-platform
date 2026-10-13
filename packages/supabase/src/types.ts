@@ -24,6 +24,7 @@ export type Role = {
   description: string | null;
   rank: number;
   is_system: boolean;
+  in_schedule: boolean;
 };
 
 export type Site = {

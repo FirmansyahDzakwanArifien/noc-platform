@@ -83,6 +83,7 @@ Permission disimpan di database (`roles`, `permissions`, `role_permissions`, `us
 
 Aturan tambahan:
 - **Anti eskalasi**: user hanya bisa meng-assign/mencabut role dengan `rank` ≤ rank tertinggi miliknya (admin 100, supervisor 80, lead 60, staff 40, viewer 20, vendor 10). Role bawaan (`is_system`) tidak bisa dihapus.
+- **Tidak masuk jadwal**: role dengan `in_schedule = false` (bawaan: admin, supervisor) tidak bisa dijadwalkan dan tidak bisa dipilih sebagai rekan tukar shift — dijaga trigger `guard_schedule_user` / `guard_swap_partner`; UI menyaring lewat RPC `unschedulable_users()`.
 - Akun dengan `profiles.is_active = false` langsung kehilangan semua permission.
 - Tidak bisa approve cuti/izin milik sendiri.
 - Frontend memanggil `rpc('my_permissions')` sekali setelah login untuk menampilkan/menyembunyikan menu.
