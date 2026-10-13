@@ -5,11 +5,11 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 type Size = "sm" | "md";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm",
-  secondary: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm",
+  primary: "bg-brand-600 text-white hover:bg-brand-500 shadow-soft",
+  secondary: "bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-soft",
   ghost: "text-slate-600 hover:bg-slate-100",
-  danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-  success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+  danger: "bg-red-500 text-white hover:bg-red-600 shadow-soft",
+  success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-soft",
 };
 
 const sizes: Record<Size, string> = {
@@ -20,7 +20,7 @@ const sizes: Record<Size, string> = {
 /** Kelas tombol — dipakai juga untuk <Link> agar tampil seperti tombol. */
 export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
+    "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
     variants[variant],
     sizes[size],
     className,

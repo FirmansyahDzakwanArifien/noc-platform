@@ -31,7 +31,7 @@ export function TaskQuickForm({
         step={1}
         defaultValue={Number(task.progress_pct)}
         aria-label="Progress (%)"
-        className="h-8 w-16 rounded-lg border border-slate-300 bg-white px-2 text-xs tabular-nums shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        className="h-8 w-16 rounded-lg border border-slate-300 bg-white px-2 text-xs tabular-nums shadow-soft focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
       />
       <span className="text-xs text-slate-400">%</span>
       <SubmitButton size="sm" variant="secondary" pendingText="…">

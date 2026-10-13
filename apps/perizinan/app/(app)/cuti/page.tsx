@@ -30,7 +30,7 @@ import { ArrowLeftRight, Plus } from "lucide-react";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { LEAVE_TYPES } from "@/lib/labels";
 import { nameOf, profileNames, type SearchParams } from "@/lib/util";
-import { acceptSwap, cancelLeave, decideLeave } from "./actions";
+import { acceptSwap, cancelLeave, decideLeave, declineSwap } from "./actions";
 
 export const metadata = { title: "Cuti & Tukar Shift" };
 
@@ -122,22 +122,38 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">Alasan: {r.reason}</p>
                 </div>
-                <form action={acceptSwap}>
-                  <input type="hidden" name="id" value={r.id} />
-                  <ConfirmSubmit
-                    variant="success"
-                    size="sm"
-                    pendingText="Memproses…"
-                    confirm="Anda bersedia menggantikan shift ini? Persetujuan Anda tidak bisa ditarik kembali."
-                  >
-                    Saya bersedia menggantikan
-                  </ConfirmSubmit>
-                </form>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+                  <form action={acceptSwap}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <ConfirmSubmit
+                      variant="success"
+                      size="sm"
+                      pendingText="Memproses…"
+                      confirm="Anda bersedia menggantikan shift ini? Persetujuan Anda tidak bisa ditarik kembali."
+                      className="w-full sm:w-auto"
+                    >
+                      Saya bersedia menggantikan
+                    </ConfirmSubmit>
+                  </form>
+                  <form action={declineSwap} className="flex w-full gap-2 sm:w-auto">
+                    <input type="hidden" name="id" value={r.id} />
+                    <Input name="note" placeholder="Alasan (opsional)" maxLength={200} className="h-8 min-w-0 flex-1 text-xs sm:w-44" />
+                    <ConfirmSubmit
+                      variant="ghost"
+                      size="sm"
+                      pendingText="…"
+                      confirm="Tolak permintaan tukar shift ini?"
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      Tidak bisa
+                    </ConfirmSubmit>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
           <CardContent className="border-t border-slate-100 py-3 text-xs text-slate-500">
-            Tidak bisa menggantikan? Hubungi rekan agar membatalkan permintaannya.
+            Tidak bisa menggantikan? Klik “Tidak bisa” — rekan Anda langsung mendapat notifikasi agar mencari pengganti lain.
           </CardContent>
         </Card>
       )}

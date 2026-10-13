@@ -8,10 +8,10 @@ export function PageSkeleton() {
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="h-24 rounded-xl border border-slate-200 bg-white" />
+          <div key={i} className="h-24 rounded-2xl border border-slate-200/70 bg-white" />
         ))}
       </div>
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
         <div className="h-12 border-b border-slate-100 bg-slate-50" />
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex items-center gap-4 border-b border-slate-100 px-5 py-4 last:border-0">

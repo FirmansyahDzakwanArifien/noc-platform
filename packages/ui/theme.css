@@ -3,17 +3,22 @@
   --font-sans: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-montserrat), "Montserrat", ui-sans-serif, system-ui, sans-serif;
 
-  /* Merah Jarvis */
-  --color-brand-50: #fef2f2;
-  --color-brand-100: #fee2e2;
-  --color-brand-200: #fecaca;
-  --color-brand-300: #fca5a5;
-  --color-brand-400: #f87171;
-  --color-brand-500: #ef4444;
-  --color-brand-600: #dc2626;
-  --color-brand-700: #b91c1c;
-  --color-brand-800: #991b1b;
-  --color-brand-900: #7f1d1d;
+  /* Merah Jarvis — versi lembut (sedikit ke arah rose) agar tidak "berat" di mata */
+  --color-brand-50: #fff6f6;
+  --color-brand-100: #ffe8e8;
+  --color-brand-200: #ffd0d1;
+  --color-brand-300: #fdaaab;
+  --color-brand-400: #f77b7e;
+  --color-brand-500: #ec5558;
+  --color-brand-600: #dc3c40;
+  --color-brand-700: #bb2d31;
+  --color-brand-800: #9a282b;
+  --color-brand-900: #7f2629;
+
+  /* Kanvas & bayangan lembut */
+  --color-canvas: #f6f7f9;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 1px rgb(15 23 42 / 0.02);
+  --shadow-lift: 0 8px 24px -8px rgb(15 23 42 / 0.12), 0 2px 6px -2px rgb(15 23 42 / 0.06);
 
   --animate-fade-up: fade-up 0.5s ease-out both;
   --animate-pulse-line: pulse-line 3s linear infinite;
@@ -38,7 +43,7 @@
     -webkit-font-smoothing: antialiased;
   }
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-canvas text-slate-800;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;

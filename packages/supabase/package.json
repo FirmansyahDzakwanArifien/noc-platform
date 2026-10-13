@@ -12,7 +12,8 @@
     "./apps": "./src/apps.ts",
     "./env": "./src/env.ts",
     "./types": "./src/types.ts",
-    "./actions": "./src/actions.ts"
+    "./actions": "./src/actions.ts",
+    "./notifications-route": "./src/notifications-route.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

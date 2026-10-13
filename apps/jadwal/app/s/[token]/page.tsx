@@ -61,14 +61,14 @@ export default async function SharedSchedulePage({ params }: Props) {
   const inRange = today >= data.start_date && today <= data.end_date;
 
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="relative overflow-hidden bg-slate-950 text-white">
-        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-brand-600/30 blur-3xl animate-float" />
-        <div className="pointer-events-none absolute -bottom-32 left-10 size-72 rounded-full bg-red-900/40 blur-3xl" />
+    <div className="min-h-dvh">
+      <header className="relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-brand-50 via-white to-amber-50/60">
+        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-brand-200/50 blur-3xl animate-float" />
+        <div className="pointer-events-none absolute -bottom-32 left-10 size-72 rounded-full bg-amber-100/60 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-          <Logo tone="dark" />
-          <h1 className="mt-6 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{data.title}</h1>
-          <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-300">
+          <Logo />
+          <h1 className="mt-6 font-display text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{data.title}</h1>
+          <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
             <Chip icon={<CalendarRange className="size-4" />}>{rangeLabel(data.start_date, data.end_date)}</Chip>
             <Chip icon={<Users className="size-4" />}>
               {data.team_name ?? "Semua tim"} · {personList.length} orang
@@ -99,7 +99,7 @@ export default async function SharedSchedulePage({ params }: Props) {
                   <section
                     key={d}
                     className={cn(
-                      "rounded-2xl border bg-white p-4 shadow-sm",
+                      "rounded-2xl border bg-white p-4 shadow-soft",
                       isToday ? "border-brand-300 ring-2 ring-brand-100" : "border-slate-200",
                     )}
                   >
@@ -147,7 +147,7 @@ export default async function SharedSchedulePage({ params }: Props) {
             </div>
 
             {/* Tablet/desktop: matriks orang × tanggal */}
-            <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+            <div className="hidden overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-soft md:block">
               <div className="overflow-x-auto">
                 <table className="w-full border-separate border-spacing-0 text-xs">
                   <thead>
@@ -212,7 +212,7 @@ export default async function SharedSchedulePage({ params }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600 shadow-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-slate-200/70 bg-white px-4 py-3 text-xs text-slate-600 shadow-soft">
               <span className="font-medium text-slate-700">Keterangan:</span>
               {legend.map((s) => (
                 <span key={s.code} className="inline-flex items-center gap-1.5">
@@ -248,8 +248,8 @@ export default async function SharedSchedulePage({ params }: Props) {
 
 function Chip({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/15">
-      <span className="text-brand-400" aria-hidden>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 shadow-soft ring-1 ring-slate-200/70">
+      <span className="text-brand-500" aria-hidden>
         {icon}
       </span>
       {children}
@@ -259,7 +259,7 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
 
 function Invalid() {
   return (
-    <div className="grid min-h-dvh place-items-center bg-slate-50 px-4 text-center">
+    <div className="grid min-h-dvh place-items-center px-4 text-center">
       <div className="max-w-sm">
         <Logo className="justify-center" />
         <h1 className="mt-6 text-xl font-semibold text-slate-900">Link jadwal tidak berlaku</h1>

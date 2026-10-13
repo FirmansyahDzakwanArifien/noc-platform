@@ -1,6 +1,6 @@
 import { AppShell, type NavItem } from "@noc/ui/app-shell";
 import { requireAuth } from "@noc/supabase/auth";
-import { CalendarCheck, CalendarDays, CalendarRange, Share2 } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarRange, RefreshCw, Share2 } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const auth = await requireAuth();
@@ -8,6 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const nav: NavItem[] = [
     { href: "/", label: "Jadwal Saya", icon: <CalendarDays />, exact: true },
     { href: "/kalender", label: "Kalender Tim", icon: <CalendarRange /> },
+    { href: "/sinkron", label: "Sinkron ke HP", icon: <RefreshCw /> },
   ];
   if (auth.can("schedule.manage")) {
     nav.push({ href: "/kelola", label: "Kelola Jadwal", icon: <CalendarCheck /> });

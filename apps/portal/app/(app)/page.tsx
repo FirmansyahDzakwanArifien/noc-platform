@@ -55,6 +55,19 @@ type MySchedule = {
   site_name: string | null;
 };
 
+type OnDuty = {
+  user_id: string;
+  full_name: string;
+  team_name: string | null;
+  shift_code: string;
+  shift_name: string;
+  color: string | null;
+  start_time: string;
+  end_time: string;
+  is_leader: boolean;
+  ends_at: string;
+};
+
 type ProjectRow = { id: string; code: string; name: string; status: string; progress_pct: number; target_date: string | null; is_overdue: boolean };
 type IncidentRow = { id: string; ticket_no: string; title: string; severity: string; status: string; started_at: string };
 
@@ -78,7 +91,7 @@ export default async function DashboardPage() {
   const since = new Date(now.getTime() - 13 * 86_400_000);
   const sinceDate = wibDate(since);
 
-  const [schedule, announcements, unread, openItems, pendingLeave, activePermits, myTasks, incidents, handovers, permits, projects, recentIncidents] =
+  const [schedule, announcements, unread, openItems, pendingLeave, activePermits, myTasks, incidents, handovers, permits, projects, recentIncidents, onDuty] =
     await Promise.all([
       auth.can("schedule.view")
         ? supabase.from("v_my_schedule").select("*").gte("work_date", today).order("work_date").limit(7)
@@ -128,7 +141,26 @@ export default async function DashboardPage() {
             .order("started_at", { ascending: false })
             .limit(5)
         : empty,
+      auth.can("schedule.view") ? supabase.rpc("on_duty_now") : empty,
     ]);
+
+  // Kelompokkan petugas yang sedang jaga per shift
+  const dutyGroups = new Map<string, { shift: OnDuty; people: OnDuty[] }>();
+  for (const d of (onDuty.data as OnDuty[] | null) ?? []) {
+    const g = dutyGroups.get(d.shift_code) ?? { shift: d, people: [] };
+    g.people.push(d);
+    dutyGroups.set(d.shift_code, g);
+  }
+  const timeLeft = (iso: string) => {
+    const m = Math.max(0, Math.round((new Date(iso).getTime() - now.getTime()) / 60_000));
+    return m >= 60 ? `${Math.floor(m / 60)} jam${m % 60 ? ` ${m % 60} mnt` : ""}` : `${m} mnt`;
+  };
+  const initialsOf = (name: string) =>
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("");
 
   const firstName = (auth.profile?.full_name ?? auth.email).split(" ")[0];
   const mySchedule = (schedule.data as MySchedule[] | null) ?? [];
@@ -183,14 +215,14 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-xl sm:p-8">
-        <div className="absolute -right-16 -top-24 size-72 rounded-full bg-brand-600/40 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-32 left-1/3 size-72 rounded-full bg-brand-900/50 blur-3xl" aria-hidden />
-        <svg viewBox="0 0 600 80" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-20 w-full opacity-40" aria-hidden>
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-5 shadow-soft sm:p-8">
+        <div className="absolute -right-20 -top-28 size-80 rounded-full bg-brand-100/80 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-40 left-1/4 size-80 rounded-full bg-amber-50 blur-3xl" aria-hidden />
+        <svg viewBox="0 0 600 80" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-20 w-full opacity-50" aria-hidden>
           <path
             d="M0 50 H200 L215 50 L228 20 L245 72 L262 35 L272 50 H420 L432 50 L442 30 L456 66 L466 50 H600"
             fill="none"
-            stroke="#ef4444"
+            stroke="#fdaaab"
             strokeWidth="1.5"
             strokeDasharray="200 200"
             className="animate-pulse-line"
@@ -199,33 +231,33 @@ export default async function DashboardPage() {
 
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="animate-fade-up">
-            <p className="text-sm text-slate-400">{greeting()},</p>
-            <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-4xl">{firstName} 👋</h1>
+            <p className="text-sm text-slate-500">{greeting()},</p>
+            <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">{firstName} 👋</h1>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
               {todayShift ? (
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 backdrop-blur">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1.5 text-slate-700 backdrop-blur">
                   <span className="size-2 rounded-full" style={{ background: todayShift.color ?? "#94a3b8" }} />
                   Hari ini: <b className="font-semibold">{todayShift.shift_name}</b>
                   {todayShift.is_working && (
-                    <span className="text-slate-300">
+                    <span className="text-slate-500">
                       {formatTime(todayShift.start_time)}–{formatTime(todayShift.end_time)}
                     </span>
                   )}
                 </span>
               ) : (
                 auth.can("schedule.view") && (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">Tidak ada jadwal hari ini</span>
+                  <span className="rounded-full border border-slate-200/80 bg-white/80 px-3 py-1.5 text-slate-500">Tidak ada jadwal hari ini</span>
                 )
               )}
               {auth.roles.map((r) => (
-                <span key={r} className="rounded-full bg-brand-600/90 px-2.5 py-1 text-xs font-semibold capitalize">
+                <span key={r} className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold capitalize text-brand-700 ring-1 ring-brand-100">
                   {r}
                 </span>
               ))}
             </div>
           </div>
           <div className="animate-fade-up text-left lg:text-right [animation-delay:120ms]">
-            <LiveClock showDate className="font-display text-3xl font-bold tracking-tight sm:text-5xl" />
+            <LiveClock showDate className="font-display text-3xl font-bold tracking-tight text-slate-800 sm:text-5xl" />
           </div>
         </div>
 
@@ -235,9 +267,9 @@ export default async function DashboardPage() {
               <a
                 key={a.label}
                 href={a.href}
-                className="group inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium backdrop-blur transition hover:-translate-y-0.5 hover:border-brand-500/60 hover:bg-brand-600/20"
+                className="group inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 backdrop-blur transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50/60 hover:text-brand-800"
               >
-                <a.icon className="size-4 text-brand-400" aria-hidden />
+                <a.icon className="size-4 text-brand-500" aria-hidden />
                 {a.label}
               </a>
             ))}
@@ -260,7 +292,7 @@ export default async function DashboardPage() {
             <a
               key={s.label}
               href={s.href}
-              className="group animate-fade-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md"
+              className="group animate-fade-up rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
               style={{ animationDelay: `${i * 60}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -278,6 +310,64 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* Siapa jaga sekarang */}
+      {auth.can("schedule.view") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="relative flex size-2.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+              </span>
+              Sedang bertugas sekarang
+            </CardTitle>
+            <a href={`${appUrl("jadwal")}/kalender`} className="text-sm font-medium text-brand-600 hover:underline">
+              Kalender tim
+            </a>
+          </CardHeader>
+          <CardContent>
+            {dutyGroups.size === 0 ? (
+              <p className="text-sm text-slate-500">Tidak ada shift yang sedang berjalan menurut roster yang dipublikasikan.</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {[...dutyGroups.values()].map(({ shift, people }) => (
+                  <div key={shift.shift_code} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: shift.color ?? "#94a3b8" }}>
+                        {shift.shift_code}
+                      </span>
+                      <p className="text-sm font-semibold text-slate-800">{shift.shift_name}</p>
+                      <span className="ml-auto text-xs text-slate-500">
+                        {formatTime(shift.start_time)}–{formatTime(shift.end_time)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">Berakhir dalam {timeLeft(shift.ends_at)}</p>
+                    <ul className="mt-3 space-y-2">
+                      {people.map((p) => (
+                        <li key={p.user_id} className="flex items-center gap-2.5">
+                          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                            {initialsOf(p.full_name)}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                            {p.full_name}
+                            {p.user_id === auth.userId && <span className="ml-1 text-xs text-brand-600">(Anda)</span>}
+                          </span>
+                          {p.is_leader && (
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-100">
+                              Leader
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Aplikasi */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {apps.map((a) => {
@@ -286,13 +376,13 @@ export default async function DashboardPage() {
             <a
               key={a.key}
               href={a.url}
-              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
             >
               <div
                 className={`absolute -right-8 -top-8 size-28 rounded-full bg-gradient-to-br opacity-10 transition-transform duration-500 group-hover:scale-150 ${meta?.gradient}`}
                 aria-hidden
               />
-              <span className={`grid size-11 place-items-center rounded-xl bg-gradient-to-br text-white shadow-md ${meta?.gradient}`}>
+              <span className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-soft ${meta?.gradient}`}>
                 {meta && <meta.icon className="size-5" aria-hidden />}
               </span>
               <p className="mt-4 flex items-center gap-1 font-semibold text-slate-900">
@@ -352,7 +442,7 @@ export default async function DashboardPage() {
                   return (
                     <div
                       key={s.id}
-                      className={`min-w-28 flex-1 rounded-xl border p-3 transition hover:shadow-md ${
+                      className={`min-w-28 flex-1 rounded-xl border p-3 transition hover:shadow-lift ${
                         isToday ? "border-brand-300 bg-brand-50 ring-2 ring-brand-100" : "border-slate-200 bg-white"
                       }`}
                     >

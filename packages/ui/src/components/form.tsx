@@ -2,7 +2,7 @@ import type { InputHTMLAttributes, LabelHTMLAttributes, ReactNode, SelectHTMLAtt
 import { cn } from "../cn";
 
 const control =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100";
+  "w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-soft transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100/70 disabled:bg-slate-50";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(control, "h-10", className)} {...props} />;

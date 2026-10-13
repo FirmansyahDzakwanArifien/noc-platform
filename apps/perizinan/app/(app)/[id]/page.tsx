@@ -233,7 +233,7 @@ export default async function PermitDetailPage({
                   <summary className={buttonClass("ghost", "md", "cursor-pointer list-none text-red-600 [&::-webkit-details-marker]:hidden")}>
                     Hapus
                   </summary>
-                  <div className="absolute right-0 z-10 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+                  <div className="absolute right-0 z-10 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200/70 bg-white p-3 shadow-lift">
                     <p className="text-sm text-slate-600">
                       Hapus izin ini beserta personel, barang, dan log kunjungannya? Tindakan ini tidak bisa dibatalkan.
                     </p>

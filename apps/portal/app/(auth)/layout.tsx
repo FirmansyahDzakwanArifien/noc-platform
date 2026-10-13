@@ -13,24 +13,24 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       {/* Panel brand */}
-      <aside className="relative hidden overflow-hidden bg-slate-950 text-white lg:flex lg:flex-col">
+      <aside className="relative hidden overflow-hidden border-r border-slate-200/60 bg-gradient-to-br from-brand-50 via-white to-amber-50/60 text-slate-900 lg:flex lg:flex-col">
         {/* grid jaringan */}
-        <svg className="absolute inset-0 size-full opacity-[0.07]" aria-hidden>
+        <svg className="absolute inset-0 size-full opacity-[0.35]" aria-hidden>
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M40 0H0V40" fill="none" stroke="white" strokeWidth="1" />
+              <path d="M40 0H0V40" fill="none" stroke="#e2e8f0" strokeWidth="1" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
-        <div className="absolute -left-24 top-1/4 size-96 animate-float rounded-full bg-brand-600/30 blur-3xl" aria-hidden />
+        <div className="absolute -left-24 top-1/4 size-96 animate-float rounded-full bg-brand-200/50 blur-3xl" aria-hidden />
         <div
-          className="absolute -right-20 bottom-10 size-80 animate-float rounded-full bg-brand-900/40 blur-3xl [animation-delay:-4s]"
+          className="absolute -right-20 bottom-10 size-80 animate-float rounded-full bg-amber-100/60 blur-3xl [animation-delay:-4s]"
           aria-hidden
         />
 
         {/* garis denyut monitoring */}
-        <svg viewBox="0 0 600 120" className="absolute inset-x-0 top-[58%] w-full opacity-60" preserveAspectRatio="none" aria-hidden>
+        <svg viewBox="0 0 600 120" className="absolute inset-x-0 top-[58%] w-full opacity-70" preserveAspectRatio="none" aria-hidden>
           <path
             d="M0 60 H170 L190 60 L205 25 L225 100 L245 40 L258 60 H380 L395 60 L408 35 L425 85 L438 60 H600"
             fill="none"
@@ -41,17 +41,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           />
           <defs>
             <linearGradient id="pulse" x1="0" x2="1">
-              <stop offset="0" stopColor="#ef4444" stopOpacity="0" />
-              <stop offset="0.5" stopColor="#ef4444" />
-              <stop offset="1" stopColor="#ef4444" stopOpacity="0" />
+              <stop offset="0" stopColor="#f77b7e" stopOpacity="0" />
+              <stop offset="0.5" stopColor="#f77b7e" />
+              <stop offset="1" stopColor="#f77b7e" stopOpacity="0" />
             </linearGradient>
           </defs>
         </svg>
 
         <div className="relative flex flex-1 flex-col p-10 xl:p-14">
           <div className="flex items-center justify-between">
-            <Logo tone="dark" />
-            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 backdrop-blur">
+            <Logo />
+            <span className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1.5 text-xs text-slate-600 shadow-soft backdrop-blur">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
@@ -61,11 +61,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <div className="mt-auto max-w-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-400">Network Operations Center</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">Network Operations Center</p>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.1] tracking-tight xl:text-5xl">
-              Satu pusat kendali untuk <span className="text-brand-500">operasional</span> NOC.
+              Satu pusat kendali untuk <span className="text-brand-600">operasional</span> NOC.
             </h1>
-            <p className="mt-4 text-base text-slate-400">
+            <p className="mt-4 text-base text-slate-600">
               Jadwal shift, serah terima, perizinan site, dan progres project tim — semuanya terhubung dalam satu akun.
             </p>
 
@@ -73,18 +73,18 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               {MODULES.map((m, i) => (
                 <div
                   key={m.name}
-                  className="animate-fade-up rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur transition hover:border-brand-500/50 hover:bg-white/[0.07]"
+                  className="animate-fade-up rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
                   style={{ animationDelay: `${150 + i * 90}ms` }}
                 >
-                  <m.icon className="size-5 text-brand-400" aria-hidden />
+                  <m.icon className="size-5 text-brand-500" aria-hidden />
                   <p className="mt-3 text-sm font-semibold">{m.name}</p>
-                  <p className="text-xs text-slate-400">{m.desc}</p>
+                  <p className="text-xs text-slate-500">{m.desc}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <p className="mt-10 flex items-center gap-2 text-xs text-slate-500">
+          <p className="mt-10 flex items-center gap-2 text-xs text-slate-400">
             <ShieldCheck className="size-4" aria-hidden /> Akses khusus karyawan PT Jarvis Integrasi Solusi
           </p>
         </div>

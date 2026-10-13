@@ -53,12 +53,12 @@ export function MobileNav({
 
       <div className={cn("fixed inset-0 z-50 md:hidden", open ? "pointer-events-auto" : "pointer-events-none")} aria-hidden={!open}>
         <div
-          className={cn("absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity", open ? "opacity-100" : "opacity-0")}
+          className={cn("absolute inset-0 bg-slate-900/25 backdrop-blur-[2px] transition-opacity", open ? "opacity-100" : "opacity-0")}
           onClick={() => setOpen(false)}
         />
         <aside
           className={cn(
-            "absolute inset-y-0 left-0 flex w-[85%] max-w-80 flex-col bg-white shadow-2xl transition-transform duration-300",
+            "absolute inset-y-0 left-0 flex w-[85%] max-w-80 flex-col bg-white shadow-lift transition-transform duration-300 ease-out",
             open ? "translate-x-0" : "-translate-x-full",
           )}
           role="dialog"
@@ -129,7 +129,7 @@ export function MobileNav({
 
           <div className="border-t border-slate-100 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-3 px-2 py-2">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 text-xs font-semibold text-white">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-100 to-brand-200 text-xs font-semibold text-brand-800">
                 {user.initials || "?"}
               </span>
               <span className="min-w-0">

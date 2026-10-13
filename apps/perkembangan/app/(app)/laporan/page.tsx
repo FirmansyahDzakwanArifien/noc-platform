@@ -214,7 +214,7 @@ export default async function ReportPage({
 
 function Stat({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200/70 bg-white p-4 shadow-soft">
       <p className={`text-2xl font-semibold tabular-nums ${danger && value > 0 ? "text-red-600" : "text-slate-900"}`}>{value}</p>
       <p className="mt-1 text-xs text-slate-500">{label}</p>
     </div>

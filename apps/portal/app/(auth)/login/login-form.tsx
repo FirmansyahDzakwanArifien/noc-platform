@@ -115,7 +115,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
         </div>
         <Button
           type="submit"
-          className="group h-11 w-full bg-gradient-to-r from-brand-600 to-brand-700 shadow-md shadow-brand-600/20 hover:from-brand-700 hover:to-brand-800"
+          className="group h-11 w-full bg-gradient-to-r from-brand-500 to-brand-600 shadow-md shadow-brand-500/15 hover:from-brand-500 hover:to-brand-500"
           disabled={loading}
         >
           {loading ? (

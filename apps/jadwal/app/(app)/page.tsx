@@ -3,7 +3,7 @@ import { appUrl } from "@noc/supabase/apps";
 import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
 import { buttonClass, Card, CardContent, cn, EmptyState, Flash, Forbidden, formatTime, PageHeader } from "@noc/ui";
-import { ArrowLeftRight, CalendarClock, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, ChevronLeft, ChevronRight, Smartphone, Star } from "lucide-react";
 import {
   addMonths,
   dateRange,
@@ -115,15 +115,20 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
         title="Jadwal Saya"
         description="Jadwal shift Anda per bulan, dari roster yang sudah dipublikasikan."
         actions={
-          <a href={swapUrl} className={buttonClass("secondary")}>
-            <ArrowLeftRight className="size-4" aria-hidden /> Ajukan tukar shift
-          </a>
+          <>
+            <Link href="/sinkron" className={buttonClass("secondary")}>
+              <Smartphone className="size-4" aria-hidden /> Sinkron ke HP
+            </Link>
+            <a href={swapUrl} className={buttonClass("secondary")}>
+              <ArrowLeftRight className="size-4" aria-hidden /> Ajukan tukar shift
+            </a>
+          </>
         }
       />
       <Flash searchParams={sp} />
 
       {/* Ringkasan shift terdekat */}
-      <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+      <div className="mb-4 flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-soft">
         <CalendarClock className="size-5 shrink-0 text-brand-600" aria-hidden />
         {next ? (
           <div className="min-w-0 text-sm">
@@ -261,7 +266,7 @@ export default async function MySchedulePage({ searchParams }: { searchParams: S
         /* Daftar ringkas untuk HP */
         <div className="mt-6 sm:hidden">
           <h2 className="mb-2 text-sm font-semibold text-slate-900">Daftar jadwal</h2>
-          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200/70 bg-white">
             {rows.map((s) => (
               <li key={s.id} className={cn("flex items-center gap-3 px-4 py-2.5 text-sm", s.work_date === today && "bg-brand-50")}>
                 <span className="w-24 shrink-0 text-slate-500">{shortDate(s.work_date)}</span>

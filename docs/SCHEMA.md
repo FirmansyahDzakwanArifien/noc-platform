@@ -221,6 +221,11 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 | `incidents` / `incident_updates` | Tiket gangguan + timeline. |
 | `attachments` | Metadata file di bucket Storage `attachments` (private). |
 | `comments` / `notifications` / `announcements` | Kolaborasi & informasi. |
+| `calendar_feeds` | Token rahasia feed iCal pribadi (`/ical/<token>.ics` di app Jadwal). Dibaca anon hanya lewat RPC `get_calendar_feed`. |
+
+**Notifikasi otomatis** (trigger → `notifications`): approver izin kerja ditunjuk/keputusan approval, cuti/izin/tukar shift baru (ke approver & rekan), rekan setuju/menolak tukar shift, handover diajukan/diterima/dikembalikan, task ditugaskan, incident ditugaskan & incident kritis baru. Aksi oleh diri sendiri tidak dinotifikasi.
+
+**RPC baru:** `on_duty_now()` (siapa jaga sekarang, ikut RLS), `decline_shift_swap(id, note)`, `my_calendar_feed(reset)`.
 | `audit_logs` | Riwayat perubahan otomatis (termasuk perubahan role & jadwal). |
 
 ## 7. Otomasi di Database

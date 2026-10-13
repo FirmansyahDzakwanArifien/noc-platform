@@ -99,7 +99,7 @@ export default async function MyTasksPage({
           }
         />
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="rounded-xl border border-slate-200/70 bg-white shadow-soft">
           <Table>
             <THead>
               <tr>

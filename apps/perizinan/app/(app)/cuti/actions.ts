@@ -86,6 +86,16 @@ export async function acceptSwap(formData: FormData) {
   done(LIST, "Anda menyetujui tukar shift. Menunggu persetujuan atasan.");
 }
 
+export async function declineSwap(formData: FormData) {
+  const id = str(formData, "id");
+  if (!isUuid(id)) fail(LIST, "Data tidak valid.");
+  const { supabase } = await actionContext(LIST);
+  const { error } = await supabase.rpc("decline_shift_swap", { p_request_id: id, p_note: str(formData, "note") ?? undefined });
+  if (error) fail(LIST, dbError(error));
+  revalidatePath(LIST);
+  done(LIST, "Permintaan tukar shift ditolak. Rekan Anda sudah diberi tahu.");
+}
+
 export async function decideLeave(formData: FormData) {
   const id = str(formData, "id");
   if (!isUuid(id)) fail(LIST, "Data tidak valid.");

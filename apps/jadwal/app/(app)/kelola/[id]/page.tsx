@@ -209,7 +209,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
         <Alert tone="info">Periode ini diarsipkan dan tidak terlihat oleh anggota tim. Kembalikan ke draft untuk mengubah lalu mempublikasikan lagi.</Alert>
       )}
       {period.notes && (
-        <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        <p className="rounded-lg border border-slate-200/70 bg-white px-4 py-3 text-sm text-slate-600">
           <span className="font-medium text-slate-700">Catatan:</span> {period.notes}
         </p>
       )}
@@ -325,7 +325,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
                                   title={cur && cur.count > 1 ? `${cur.count} shift pada tanggal ini` : undefined}
                                   style={s ? shiftStyle(s.color) : undefined}
                                   className={cn(
-                                    "h-8 w-full min-w-12 cursor-pointer appearance-none rounded border border-slate-200 bg-white px-1 text-center text-xs font-semibold text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-300 data-[dirty=1]:ring-2 data-[dirty=1]:ring-brand-500",
+                                    "h-8 w-full min-w-12 cursor-pointer appearance-none rounded border border-slate-200/70 bg-white px-1 text-center text-xs font-semibold text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-300 data-[dirty=1]:ring-2 data-[dirty=1]:ring-brand-500",
                                     cur && cur.count > 1 && "border-2 border-dashed border-slate-700",
                                   )}
                                 >
@@ -432,7 +432,7 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
 
 function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 sm:px-4">
+    <div className="rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 sm:px-4">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="mt-0.5 font-semibold tabular-nums text-slate-900">{value}</p>
       {hint && <p className="text-[11px] text-slate-500">{hint}</p>}

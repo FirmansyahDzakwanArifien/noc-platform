@@ -24,8 +24,8 @@ export function NavLinks({ items }: { items: NavItem[] }) {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              active ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              "flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+              active ? "bg-white text-brand-700 shadow-soft ring-1 ring-slate-200/70" : "text-slate-500 hover:bg-white/70 hover:text-slate-900",
             )}
           >
             {item.icon && <span className="[&>svg]:size-4">{item.icon}</span>}

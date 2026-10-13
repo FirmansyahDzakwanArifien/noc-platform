@@ -42,7 +42,7 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
 
       <div className="mb-4 grid gap-2 sm:grid-cols-3">
         {roleList.map((r) => (
-          <div key={r.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <div key={r.id} className="rounded-lg border border-slate-200/70 bg-white px-3 py-2">
             <p className="text-sm font-medium text-slate-900">
               {r.name} <span className="text-xs font-normal text-slate-400">rank {r.rank}</span>
             </p>
