@@ -26,3 +26,22 @@ export function isEmailAllowed(email: string): boolean {
   const domain = e.split("@")[1] ?? "";
   return ALLOWED_SIGNUP_DOMAINS.includes(domain);
 }
+
+/**
+ * Kunci publik JWT (JWKS) project Supabase — bukan rahasia. Dipakai getClaims() agar verifikasi
+ * login tidak perlu mengambil JWKS lewat jaringan di request pertama tiap instance.
+ * Jika kunci dirotasi (kid tidak cocok), auth-js otomatis mengambil JWKS terbaru dari server.
+ */
+export const SUPABASE_JWKS = [
+  {
+    alg: "ES256",
+    crv: "P-256",
+    ext: true,
+    key_ops: ["verify"],
+    kid: "8a7578b9-12f6-441b-8b1b-005f1fb3b774",
+    kty: "EC",
+    use: "sig",
+    x: "7KRbM6a4YwJ7I5IKIr-iEirENN5H0DRqbG1jMjsk4PU",
+    y: "GZg4LJ0jy7dPr3AeT9DCgddWY5mFgTI_jYHG_xJWt8Q",
+  },
+];

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { cookieDomain, PORTAL_URL, supabaseEnv } from "./env";
+import { cookieDomain, PORTAL_URL, SUPABASE_JWKS, supabaseEnv } from "./env";
 
 type Options = {
   /** Path yang boleh diakses tanpa login (prefix match). */
@@ -30,7 +30,7 @@ export async function updateSession(request: NextRequest, opts: Options = {}) {
 
   // getClaims: refresh session bila perlu, lalu verifikasi JWT (ES256) secara lokal via JWKS —
   // tanpa round-trip ke server Auth di setiap request.
-  const { data } = await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims(undefined, { keys: SUPABASE_JWKS });
   const user = data?.claims?.sub;
 
   const path = request.nextUrl.pathname;

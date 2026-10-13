@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { PORTAL_URL } from "./env";
+import { PORTAL_URL, SUPABASE_JWKS } from "./env";
 import { createClient } from "./server";
 import type { Profile } from "./types";
 
@@ -18,7 +18,7 @@ export type Auth = {
 export const getAuth = cache(async (): Promise<Auth | null> => {
   const supabase = await createClient();
   // JWT diverifikasi lokal (ES256 + JWKS), tidak memanggil server Auth seperti getUser().
-  const { data } = await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims(undefined, { keys: SUPABASE_JWKS });
   const claims = data?.claims;
   if (!claims?.sub) return null;
   const user = { id: claims.sub, email: (claims.email as string | undefined) ?? "" };
