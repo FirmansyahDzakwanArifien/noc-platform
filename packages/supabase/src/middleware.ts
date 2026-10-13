@@ -34,6 +34,12 @@ export async function updateSession(request: NextRequest, opts: Options = {}) {
   const user = data?.claims?.sub;
 
   const path = request.nextUrl.pathname;
+
+  // Ping keep-warm (/api/warm → "/") boleh lewat agar kode halaman utama ikut dimuat di server.
+  // Aman: layout tetap memanggil requireAuth() sehingga tanpa sesi hasilnya hanya redirect ke login.
+  if (!user && path === "/" && request.method === "GET" && request.headers.get("x-noc-warm") === "1") {
+    return response;
+  }
   const isPublic = (opts.publicPaths ?? []).some((p) => path === p || path.startsWith(p + "/"));
 
   if (!user && !isPublic) {
