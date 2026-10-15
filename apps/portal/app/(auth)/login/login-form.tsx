@@ -65,7 +65,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-slate-900">Selamat datang kembali</h1>
-        <p className="mt-1.5 text-sm text-slate-500">Masuk untuk mengakses seluruh aplikasi NOC.</p>
+        <p className="mt-1.5 text-sm text-slate-500">Masuk untuk mengakses seluruh aplikasi Jarvis Ops.</p>
       </div>
       {error && <Alert tone="error">{error}</Alert>}
       {info && <Alert tone="success">{info}</Alert>}

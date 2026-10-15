@@ -87,7 +87,7 @@ export default async function ProjectListPage({
     <div>
       <PageHeader
         title="Project"
-        description="Daftar project tim NOC beserta progress, target, dan task yang terhambat. Klik project untuk detailnya."
+        description="Daftar project tim beserta progress, target, dan task yang terhambat. Klik project untuk detailnya."
         actions={
           auth.can("project.create") && (
             <Link href="/baru" className={buttonClass()}>

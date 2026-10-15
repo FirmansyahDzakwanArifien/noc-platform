@@ -1,4 +1,4 @@
-# NOC Platform — Skema & Arsitektur
+# Jarvis Ops — Skema & Arsitektur
 
 ## 1. Arsitektur
 
@@ -255,3 +255,12 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 - `teams.managed_by_team_id` = tim pembina (mis. NOC PKL dibina NOC Dedicated).
 - Jadwal: `schedule.manage_all` (admin, supervisor) mengelola semua periode; pemegang `schedule.manage` lainnya (lead) hanya periode tim sendiri + tim binaan (`can_manage_schedule`). Periode tanpa tim hanya untuk `schedule.manage_all`.
 - Peer review: sesama anggota satu tim (lead & staff, permission `review.submit`), plus lead tim pembina menilai anggota tim binaan.
+
+## Divisi (NOC, SOC, …)
+
+- `divisions` (kode + nama), `teams.division_id` menentukan divisi anggota. Kelola di Portal → Divisi (`settings.manage`).
+- Data operasional ditandai `division_id` (null = umum): `handovers`, `incidents` (otomatis dari divisi pembuat lewat trigger `default_division`), `announcements`, `checklist_templates`.
+- `app_settings.division_isolation`: `false` = data digabung; `true` = user hanya melihat data divisinya + data umum (`can_see_division`). Pemegang `division.all` (admin, supervisor, lead) tetap melihat semua.
+- Incident keamanan (SOC): `incidents.category = 'keamanan'` + `security_type`, `mitre_technique`, `iocs`, `affected_assets`.
+- Kriteria review per divisi: `review_criteria.division_id` (null = semua divisi); dipakai lewat `review_criteria_for(user)`.
+- Lead saat ini mengontrol semua: `schedule.manage_all`, `review.manage`, `division.all`. Bisa dicabut lewat halaman Role & Akses.

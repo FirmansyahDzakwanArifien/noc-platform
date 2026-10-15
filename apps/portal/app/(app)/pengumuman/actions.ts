@@ -19,6 +19,7 @@ export async function saveAnnouncement(formData: FormData) {
     title: req(formData, "title", self, "Judul"),
     body: req(formData, "body", self, "Isi"),
     priority: str(formData, "priority") ?? "low",
+    division_id: str(formData, "division_id"),
     expire_at: expire,
     ...(publish ? { publish_at: publish } : id ? {} : { publish_at: new Date().toISOString() }),
   };

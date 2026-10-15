@@ -16,3 +16,4 @@ supabase/.branches/
 Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
+.claude/

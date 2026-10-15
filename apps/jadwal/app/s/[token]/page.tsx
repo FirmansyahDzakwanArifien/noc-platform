@@ -239,7 +239,7 @@ export default async function SharedSchedulePage({ params }: Props) {
           </>
         )}
         <p className="pt-2 text-center text-xs text-slate-400">
-          Jadwal resmi NOC · hanya menampilkan roster yang sudah dipublikasikan · halaman ini selalu menampilkan data terbaru
+          Jadwal resmi Jarvis Ops · hanya menampilkan roster yang sudah dipublikasikan · halaman ini selalu menampilkan data terbaru
         </p>
       </main>
     </div>
@@ -264,7 +264,7 @@ function Invalid() {
         <Logo className="justify-center" />
         <h1 className="mt-6 text-xl font-semibold text-slate-900">Link jadwal tidak berlaku</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Link ini sudah kedaluwarsa, dinonaktifkan, atau salah ketik. Minta link terbaru ke supervisor / lead NOC.
+          Link ini sudah kedaluwarsa, dinonaktifkan, atau salah ketik. Minta link terbaru ke supervisor / lead tim.
         </p>
       </div>
     </div>

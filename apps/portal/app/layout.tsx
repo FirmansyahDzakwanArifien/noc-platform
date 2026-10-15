@@ -6,7 +6,7 @@ const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta",
 const display = Montserrat({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-montserrat", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Portal NOC", template: "%s · Portal NOC" },
+  title: { default: "Portal · Jarvis Ops", template: "%s · Portal · Jarvis Ops" },
 };
 
 // Semua halaman bergantung pada session user → selalu dinamis.

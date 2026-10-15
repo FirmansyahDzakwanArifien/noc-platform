@@ -1,6 +1,6 @@
 import { AppShell, type NavItem } from "@noc/ui/app-shell";
 import { requireAuth } from "@noc/supabase/auth";
-import { Bell, ClipboardList, Database, History, LayoutDashboard, Megaphone, ShieldCheck, Users } from "lucide-react";
+import { Bell, Building2, ClipboardList, Database, History, LayoutDashboard, Megaphone, ShieldCheck, Users } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const auth = await requireAuth();
@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     nav.push({ href: "/admin/roles", label: "Role & Akses", icon: <ShieldCheck /> });
   }
   if (auth.can("portal.access")) nav.push({ href: "/admin/master", label: "Master Data", icon: <Database /> });
+  if (auth.can("settings.manage")) nav.push({ href: "/admin/divisi", label: "Divisi", icon: <Building2 /> });
   if (auth.can("audit.view")) nav.push({ href: "/admin/audit", label: "Audit Log", icon: <History /> });
 
   return (

@@ -52,10 +52,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Jarvis NOC//Jadwal//ID",
+    "PRODID:-//Jarvis Ops//Jadwal//ID",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    `X-WR-CALNAME:${esc(`Jadwal NOC — ${feed.full_name}`)}`,
+    `X-WR-CALNAME:${esc(`Jadwal Shift — ${feed.full_name}`)}`,
     "X-WR-TIMEZONE:Asia/Jakarta",
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
     "X-PUBLISHED-TTL:PT1H",

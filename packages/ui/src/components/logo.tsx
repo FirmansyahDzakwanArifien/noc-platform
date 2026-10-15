@@ -2,7 +2,7 @@ import { useId } from "react";
 import { cn } from "../cn";
 
 /**
- * Logo NOC — turunan identitas Jarvis: siluet belah ketupat dari dua chevron merah
+ * Logo Jarvis Ops — turunan identitas Jarvis: siluet belah ketupat dari dua chevron merah
  * bersudut tajam, dengan garis denyut (monitoring) di tengah.
  */
 export function LogoMark({ className, pulseClassName }: { className?: string; pulseClassName?: string }) {
@@ -50,11 +50,11 @@ export function Logo({
       <span className="flex flex-col leading-none">
         <span className="font-display text-[17px] font-extrabold tracking-[0.06em]">
           <span className={tone === "dark" ? "text-white" : "text-slate-900"}>JARVIS</span>
-          <span className="ml-1.5 text-brand-600">NOC</span>
+          <span className="ml-1.5 text-brand-600">OPS</span>
         </span>
         {subtitle && (
           <span className={cn("mt-1 text-[10px] font-medium uppercase tracking-[0.22em]", tone === "dark" ? "text-slate-400" : "text-slate-500")}>
-            Network Operations
+            Network & Security Operations
           </span>
         )}
       </span>

@@ -29,7 +29,7 @@ import { deleteAnnouncement, saveAnnouncement } from "./actions";
 
 export const metadata = { title: "Pengumuman" };
 
-type Row = Announcement & { author: { full_name: string } | null };
+type Row = Announcement & { author: { full_name: string } | null; division: { code: string } | null };
 
 export default async function AnnouncementsPage({
   searchParams,
@@ -45,11 +45,15 @@ export default async function AnnouncementsPage({
 
   let query = supabase
     .from("announcements")
-    .select("*, author:profiles!announcements_created_by_fkey(full_name)")
+    .select("*, author:profiles!announcements_created_by_fkey(full_name), division:divisions(code)")
     .order("publish_at", { ascending: false })
     .limit(50);
   if (!canManage) query = query.lte("publish_at", nowIso).or(`expire_at.is.null,expire_at.gt.${nowIso}`);
-  const { data } = await query;
+  const [{ data }, { data: divData }] = await Promise.all([
+    query,
+    canManage ? supabase.from("divisions").select("id, code, name").order("sort_order") : Promise.resolve({ data: [] }),
+  ]);
+  const divisions = (divData ?? []) as { id: string; code: string; name: string }[];
   const items = (data ?? []) as unknown as Row[];
   const editing = canManage && sp.edit ? items.find((a) => a.id === sp.edit) : undefined;
   const showForm = canManage && (!!editing || sp.baru === "1");
@@ -58,7 +62,7 @@ export default async function AnnouncementsPage({
     <div className="space-y-6">
       <PageHeader
         title="Pengumuman"
-        description="Informasi resmi untuk seluruh tim NOC. Pengumuman aktif juga tampil di dashboard."
+        description="Informasi resmi untuk seluruh tim. Pengumuman aktif juga tampil di dashboard."
         actions={
           canManage &&
           !showForm && (
@@ -87,6 +91,16 @@ export default async function AnnouncementsPage({
               <Field label="Isi" required className="sm:col-span-2">
                 <Textarea name="body" rows={5} required defaultValue={editing?.body} />
               </Field>
+              <Field label="Untuk divisi" hint="Semua divisi = tampil untuk semua orang.">
+                <Select name="division_id" defaultValue={editing?.division_id ?? ""}>
+                  <option value="">Semua divisi</option>
+                  {divisions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.code} — {d.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <Field label="Prioritas" hint="Tinggi & Kritis ditonjolkan di dashboard.">
                 <Select name="priority" defaultValue={editing?.priority ?? "low"}>
                   <option value="low">Rendah — informasi umum</option>
@@ -114,7 +128,7 @@ export default async function AnnouncementsPage({
       {items.length === 0 ? (
         <EmptyState
           title="Belum ada pengumuman"
-          description={canManage ? "Buat pengumuman pertama untuk tim NOC." : "Pengumuman dari supervisor atau lead akan muncul di sini."}
+          description={canManage ? "Buat pengumuman pertama untuk tim." : "Pengumuman dari supervisor atau lead akan muncul di sini."}
         />
       ) : (
         <div className="space-y-3">
@@ -146,6 +160,7 @@ export default async function AnnouncementsPage({
                         <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
                           {a.title}
                           {a.priority !== "low" && <StatusBadge status={a.priority} />}
+                          {a.division && <Badge tone="gray">{a.division.code}</Badge>}
                           {scheduled && <Badge tone="purple">Terjadwal</Badge>}
                           {expired && <StatusBadge status="expired" />}
                         </p>

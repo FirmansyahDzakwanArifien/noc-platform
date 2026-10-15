@@ -126,7 +126,7 @@ export default async function NewPermitPage({ searchParams }: { searchParams: Se
                 ))}
               </Select>
             </Field>
-            <Field label="PIC internal" hint="Staf NOC yang mendampingi di lokasi. Boleh ditentukan nanti.">
+            <Field label="PIC internal" hint="Staf yang mendampingi di lokasi. Boleh ditentukan nanti.">
               <Select name="pic_internal" defaultValue="">
                 <option value="">Belum ditentukan</option>
                 {profileRows.map((p) => (

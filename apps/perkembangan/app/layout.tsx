@@ -6,7 +6,7 @@ const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta",
 const display = Montserrat({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-montserrat", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Perkembangan NOC", template: "%s · Perkembangan NOC" },
+  title: { default: "Perkembangan · Jarvis Ops", template: "%s · Perkembangan · Jarvis Ops" },
 };
 
 // Semua halaman bergantung pada session user → selalu dinamis.

@@ -114,7 +114,7 @@ export default async function SharedDirectoryPage({ params }: Props) {
             </div>
           </section>
         ))}
-        <p className="pt-2 text-center text-xs text-slate-400">Daftar anggota NOC · halaman ini selalu menampilkan data terbaru</p>
+        <p className="pt-2 text-center text-xs text-slate-400">Daftar anggota Jarvis Ops · halaman ini selalu menampilkan data terbaru</p>
       </main>
     </div>
   );
@@ -137,7 +137,7 @@ function Invalid() {
       <div className="max-w-sm">
         <Logo className="justify-center" />
         <h1 className="mt-6 text-xl font-semibold text-slate-900">Link tidak berlaku</h1>
-        <p className="mt-2 text-sm text-slate-500">Link ini sudah kedaluwarsa, dinonaktifkan, atau salah ketik. Minta link terbaru ke admin NOC.</p>
+        <p className="mt-2 text-sm text-slate-500">Link ini sudah kedaluwarsa, dinonaktifkan, atau salah ketik. Minta link terbaru ke admin.</p>
       </div>
     </div>
   );

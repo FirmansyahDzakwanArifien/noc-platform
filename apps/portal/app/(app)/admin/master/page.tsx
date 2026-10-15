@@ -182,6 +182,7 @@ export default async function MasterPage({
           back={back}
           editId={editId}
           rows={((await supabase.from("teams").select("*").order("name")).data ?? []) as Team[]}
+          divisions={((await supabase.from("divisions").select("id, code, name").order("sort_order")).data ?? []) as Division[]}
           people={
             ((await supabase.from("profiles").select("id, full_name, email, team_id, is_active").order("full_name")).data ?? []) as Member[]
           }
@@ -216,7 +217,7 @@ function SitesTab({ rows, back, caps, editId }: TabProps<Site>) {
               <Select name="site_type" defaultValue={row?.site_type ?? "pop"}>
                 <option value="dc">Data Center</option>
                 <option value="pop">POP</option>
-                <option value="noc_room">Ruang NOC</option>
+                <option value="noc_room">Ruang NOC/SOC</option>
                 <option value="office">Kantor</option>
               </Select>
             </Field>
@@ -271,18 +272,30 @@ function SitesTab({ rows, back, caps, editId }: TabProps<Site>) {
   );
 }
 
-function TeamsTab({ rows, back, caps, editId, people }: TabProps<Team> & { people: Member[] }) {
+type Division = { id: string; code: string; name: string };
+
+function TeamsTab({ rows, back, caps, editId, people, divisions }: TabProps<Team> & { people: Member[]; divisions: Division[] }) {
   const row = rows.find((r) => r.id === editId);
   return (
     <>
       {caps.manage && (
         <EditorCard title="Tim" table="teams" row={row} back={back}>
-          <div className="grid gap-3 sm:grid-cols-[1fr_2fr_1fr]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.5fr_1fr_1fr]">
             <Field label="Nama tim" required>
               <Input name="name" required placeholder="NOC L1" defaultValue={row?.name} />
             </Field>
             <Field label="Deskripsi">
               <Input name="description" defaultValue={row?.description ?? ""} />
+            </Field>
+            <Field label="Divisi">
+              <Select name="division_id" defaultValue={row?.division_id ?? ""}>
+                <option value="">Tanpa divisi</option>
+                {divisions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.code} — {d.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Tim pembina" hint="Lead tim pembina ikut mengelola jadwal & melihat review tim ini.">
               <Select name="managed_by_team_id" defaultValue={row?.managed_by_team_id ?? ""}>
@@ -313,7 +326,14 @@ function TeamsTab({ rows, back, caps, editId, people }: TabProps<Team> & { peopl
               <Card key={t.id} className={cn(t.id === editId && "border-brand-200 ring-2 ring-brand-100")}>
                 <CardHeader>
                   <div className="min-w-0">
-                    <CardTitle>{t.name}</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      {t.name}
+                      {t.division_id && (
+                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+                          {divisions.find((d) => d.id === t.division_id)?.code}
+                        </span>
+                      )}
+                    </CardTitle>
                     <p className="text-xs text-slate-500">
                       {t.description ? `${t.description} · ` : ""}
                       {members.length} anggota

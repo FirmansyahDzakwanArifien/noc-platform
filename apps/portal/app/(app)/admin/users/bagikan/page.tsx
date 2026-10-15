@@ -70,7 +70,7 @@ export default async function DirectorySharePage({ searchParams }: { searchParam
       </Link>
       <PageHeader
         title="Bagikan daftar anggota"
-        description="Buat link publik berisi daftar anggota aktif (nama, tim, role) yang bisa dibuka tanpa login — cocok untuk presentasi, klien, atau layar NOC."
+        description="Buat link publik berisi daftar anggota aktif (nama, tim, role) yang bisa dibuka tanpa login — cocok untuk presentasi, klien, atau layar ruang operasional."
       />
       <Flash searchParams={sp} />
 
@@ -98,7 +98,7 @@ export default async function DirectorySharePage({ searchParams }: { searchParam
         <CardContent>
           <form action={createDirectoryShare} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Judul" required className="sm:col-span-2 lg:col-span-3">
-              <Input name="title" required defaultValue="Tim NOC" maxLength={120} />
+              <Input name="title" required defaultValue="Tim Operasional" maxLength={120} />
             </Field>
             <Field label="Tim" hint="Kosong = semua tim.">
               <Select name="team_id" defaultValue="">

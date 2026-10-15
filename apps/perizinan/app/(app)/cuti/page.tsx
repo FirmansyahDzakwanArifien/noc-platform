@@ -88,7 +88,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Search
         title="Cuti, Izin & Tukar Shift"
         description={
           canApprove
-            ? "Ajukan atau putuskan permintaan cuti, izin, sakit, dinas, dan tukar shift personel NOC."
+            ? "Ajukan atau putuskan permintaan cuti, izin, sakit, dinas, dan tukar shift personel."
             : "Ajukan cuti, izin, sakit, dinas, atau tukar shift, dan pantau status persetujuannya."
         }
         actions={

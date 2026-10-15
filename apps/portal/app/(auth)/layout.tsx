@@ -61,9 +61,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <div className="mt-auto max-w-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">Network Operations Center</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">Network & Security Operations</p>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.1] tracking-tight xl:text-5xl">
-              Satu pusat kendali untuk <span className="text-brand-600">operasional</span> NOC.
+              Satu pusat kendali untuk <span className="text-brand-600">operasional</span> NOC &amp; SOC.
             </h1>
             <p className="mt-4 text-base text-slate-600">
               Jadwal shift, serah terima, perizinan site, dan progres project tim — semuanya terhubung dalam satu akun.
@@ -101,7 +101,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Logo />
           </div>
           {children}
-          <p className="mt-10 text-center text-xs text-slate-400">© {new Date().getFullYear()} Jarvis NOC</p>
+          <p className="mt-10 text-center text-xs text-slate-400">© {new Date().getFullYear()} Jarvis Ops</p>
         </div>
       </main>
     </div>

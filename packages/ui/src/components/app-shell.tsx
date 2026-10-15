@@ -72,7 +72,7 @@ export function AppShell({
             profileUrl={profileUrl}
           />
 
-          <a href={APPS[0].url} className="flex shrink-0 items-center gap-2 pr-1" aria-label="Jarvis NOC">
+          <a href={APPS[0].url} className="flex shrink-0 items-center gap-2 pr-1" aria-label="Jarvis Ops">
             <LogoMark className="size-8 lg:hidden" />
             <Logo subtitle={false} className="hidden lg:inline-flex [&_svg]:size-8" />
           </a>

@@ -1,6 +1,6 @@
-# NOC Platform
+# Jarvis Ops
 
-Kumpulan aplikasi internal NOC dalam satu monorepo:
+Kumpulan aplikasi internal operasional (NOC & SOC) dalam satu monorepo:
 
 | App | Port dev | Isi |
 |---|---|---|

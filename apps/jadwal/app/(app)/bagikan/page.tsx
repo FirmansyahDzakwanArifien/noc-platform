@@ -77,7 +77,7 @@ export default async function SharePage({ searchParams }: { searchParams: SP }) 
     <div className="space-y-6">
       <PageHeader
         title="Bagikan Jadwal"
-        description="Buat link publik untuk rentang tanggal tertentu. Siapa pun yang punya link bisa melihat jadwal tanpa login — cocok untuk dikirim ke grup, klien, atau ditampilkan di layar NOC."
+        description="Buat link publik untuk rentang tanggal tertentu. Siapa pun yang punya link bisa melihat jadwal tanpa login — cocok untuk dikirim ke grup, klien, atau ditampilkan di layar ruang operasional."
       />
       <Flash searchParams={sp} />
 
@@ -107,7 +107,7 @@ export default async function SharePage({ searchParams }: { searchParams: SP }) 
         <CardContent>
           <form action={createShare} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Judul" required className="sm:col-span-2 lg:col-span-4" hint="Tampil sebagai judul di halaman publik.">
-              <Input name="title" required defaultValue={sp.judul ?? "Jadwal Shift NOC"} maxLength={120} />
+              <Input name="title" required defaultValue={sp.judul ?? "Jadwal Shift"} maxLength={120} />
             </Field>
             <Field label="Dari tanggal" required>
               <Input name="start_date" type="date" required defaultValue={defStart} />

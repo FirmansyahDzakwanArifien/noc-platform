@@ -36,7 +36,8 @@ export default async function FillReviewPage({
   const [{ data: allowed }, { data: person }, { data: criteriaData }, { data: existingData }] = await Promise.all([
     isSelf ? Promise.resolve({ data: true }) : supabase.rpc("can_peer_review", { p_reviewee: untuk }),
     supabase.from("profiles").select("full_name, teams(name)").eq("id", untuk).maybeSingle(),
-    supabase.from("review_criteria").select("key, name, description").eq("is_active", true).order("sort_order"),
+    // Aspek penilaian mengikuti divisi orang yang dinilai (NOC/SOC punya aspek khusus).
+    supabase.rpc("review_criteria_for", { p_user: untuk }),
     supabase
       .from("performance_reviews")
       .select("highlights, improvements, goals, comment, performance_review_scores(criterion_key, score)")
