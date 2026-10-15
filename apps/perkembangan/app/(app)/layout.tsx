@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/", label: "Project", icon: <FolderKanban />, exact: true },
     { href: "/tugas-saya", label: "Tugas Saya", icon: <ListChecks /> },
     { href: "/laporan", label: "Laporan", icon: <FileText /> },
-    { href: "/review", label: "Review Bulanan", icon: <Star /> },
+    { href: "/review", label: "Penilaian", icon: <Star /> },
   ];
 
   let content: React.ReactNode = children;

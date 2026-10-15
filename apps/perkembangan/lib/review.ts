@@ -35,20 +35,56 @@ export function isYmOpen(ym: Ym): boolean {
   return ym === cur || ym === shiftYm(cur, -1);
 }
 
-export type Criterion = { key: string; name: string; description: string | null };
+export type ReviewKind = "self" | "peer" | "supervisor";
 
-export const SCORE_LABEL: Record<number, string> = {
-  1: "Perlu banyak perbaikan",
-  2: "Di bawah harapan",
-  3: "Sesuai harapan",
-  4: "Di atas harapan",
-  5: "Istimewa",
+export const REVIEW_KINDS: ReviewKind[] = ["self", "peer", "supervisor"];
+
+export function isReviewKind(v: string | null | undefined): v is ReviewKind {
+  return v === "self" || v === "peer" || v === "supervisor";
+}
+
+export const KIND_LABEL: Record<ReviewKind, string> = {
+  self: "Self review",
+  peer: "Penilaian rekan",
+  supervisor: "Penilaian atasan",
 };
 
-export function scoreTone(v: number | null | undefined): string {
-  if (v == null) return "text-slate-400";
-  if (v >= 4) return "text-emerald-600";
-  if (v >= 3) return "text-sky-600";
-  if (v >= 2) return "text-amber-600";
-  return "text-red-600";
+export const KIND_TONE: Record<ReviewKind, string> = {
+  self: "bg-sky-50 text-sky-700 ring-sky-600/20",
+  peer: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  supervisor: "bg-amber-50 text-amber-700 ring-amber-600/20",
+};
+
+export type QuestionKind = "scale" | "choice" | "text";
+
+export const QUESTION_KIND_LABEL: Record<QuestionKind, string> = {
+  scale: "Rubrik (dinilai)",
+  choice: "Pilihan (tidak dinilai)",
+  text: "Isian teks",
+};
+
+export type FormQuestion = {
+  id: string;
+  section: string;
+  prompt: string;
+  help: string | null;
+  kind: QuestionKind;
+  is_required: boolean;
+  evidence_rule: "none" | "extreme" | "always";
+  options: { id: string; label: string; description: string | null; score: number | null }[];
+};
+
+export type FormAnswer = { option_id: string | null; text: string | null; evidence: string | null };
+
+/** Nilai 0–100 → predikat. */
+export function grade(pct: number | null | undefined): { label: string; tone: string } | null {
+  if (pct == null) return null;
+  if (pct >= 85) return { label: "Sangat baik", tone: "text-emerald-600" };
+  if (pct >= 70) return { label: "Baik", tone: "text-sky-600" };
+  if (pct >= 50) return { label: "Cukup", tone: "text-amber-600" };
+  return { label: "Perlu perbaikan", tone: "text-red-600" };
+}
+
+export function pctText(pct: number | string | null | undefined): string {
+  return pct == null ? "–" : Number(pct).toFixed(0);
 }

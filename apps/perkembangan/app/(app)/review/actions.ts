@@ -1,37 +1,36 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { actionContext, dbError, done, fail, req, str } from "@noc/supabase/actions";
+import { redirect } from "next/navigation";
+import { getAuth } from "@noc/supabase/auth";
+import { dbError } from "@noc/supabase/actions";
+import { createClient } from "@noc/supabase/server";
 import { isUuid } from "@/lib/data";
-import { isYm, ymLabel, ymToDate } from "@/lib/review";
+import { isReviewKind, isYm, KIND_LABEL, ymLabel, ymToDate } from "@/lib/review";
 
-export async function submitReview(formData: FormData) {
+export type ReviewFormState = { error: string | null };
+
+/** Dipanggil dari formulir penilaian (client) lewat useActionState agar isian tidak hilang saat gagal. */
+export async function submitReview(_prev: ReviewFormState, formData: FormData): Promise<ReviewFormState> {
   const ym = String(formData.get("bulan") ?? "");
+  const kind = String(formData.get("jenis") ?? "");
   const reviewee = String(formData.get("untuk") ?? "");
-  if (!isYm(ym) || !isUuid(reviewee)) fail("/review", "Data review tidak valid.");
-  const back = `/review/isi?bulan=${ym}&untuk=${reviewee}`;
-  const { supabase, auth } = await actionContext(back, "review.submit");
+  if (!isYm(ym) || !isReviewKind(kind) || !isUuid(reviewee)) return { error: "Data penilaian tidak valid." };
 
-  const scores: Record<string, number> = {};
-  for (const [k, v] of formData.entries()) {
-    if (!k.startsWith("score:") || typeof v !== "string") continue;
-    const n = Number(v);
-    if (Number.isInteger(n) && n >= 1 && n <= 5) scores[k.slice(6)] = n;
+  let answers: unknown;
+  try {
+    answers = JSON.parse(String(formData.get("answers") ?? "{}"));
+  } catch {
+    return { error: "Isian tidak terbaca, muat ulang halaman." };
   }
-  const isSelf = reviewee === auth.userId;
 
-  const { error } = await supabase.rpc("submit_review", {
-    p_month: ymToDate(ym),
-    p_reviewee: reviewee,
-    p_scores: scores,
-    p_highlights: isSelf ? req(formData, "highlights", back, "Pencapaian") : str(formData, "highlights"),
-    p_improvements: str(formData, "improvements"),
-    p_goals: isSelf ? str(formData, "goals") : null,
-    p_comment: str(formData, "comment"),
-  });
-  if (error) fail(back, dbError(error));
+  const auth = await getAuth();
+  if (!auth) return { error: "Sesi berakhir, silakan login ulang." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_submit", { p_month: ymToDate(ym), p_type: kind, p_reviewee: reviewee, p_answers: answers });
+  if (error) return { error: dbError(error) };
 
   revalidatePath("/review");
-  revalidatePath("/review/laporan");
-  done(`/review?bulan=${ym}`, isSelf ? `Self review ${ymLabel(ym)} tersimpan.` : `Penilaian rekan ${ymLabel(ym)} tersimpan.`);
+  revalidatePath("/review/hasil");
+  redirect(`/review?bulan=${ym}&success=${encodeURIComponent(`${KIND_LABEL[kind]} ${ymLabel(ym)} tersimpan.`)}`);
 }

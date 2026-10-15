@@ -3,8 +3,9 @@ import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
 import type { Profile, Role, Team } from "@noc/supabase/types";
 import { Badge, buttonClass, Card, cn, EmptyState, Flash, Forbidden, Input, PageHeader, Select, SubmitButton } from "@noc/ui";
-import { ChevronDown, MailPlus, Search, Send, Share2, X } from "lucide-react";
-import { addRole, removeRole, resendInvite, updateUser } from "./actions";
+import { ChevronDown, MailPlus, Search, Send, Share2, Trash2, X } from "lucide-react";
+import { ConfirmSubmit } from "../../../../components/confirm-submit";
+import { addRole, deleteUser, removeRole, resendInvite, updateUser } from "./actions";
 
 export const metadata = { title: "User" };
 
@@ -266,15 +267,29 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
                     {u.employee_no && <span>NIK {u.employee_no}</span>}
                     {u.phone && <span>HP {u.phone}</span>}
                     <span>Terakhir masuk: {relative(u.lastSignIn)}</span>
-                    {u.status === "menunggu" && (
-                      <form action={resendInvite} className="ml-auto">
-                        <input type="hidden" name="email" value={u.email ?? ""} />
-                        <input type="hidden" name="back" value={back} />
-                        <SubmitButton size="sm" variant="ghost" pendingText="Mengirim…">
-                          <Send className="size-3.5" aria-hidden /> Kirim ulang undangan
-                        </SubmitButton>
-                      </form>
-                    )}
+                    <div className="ml-auto flex flex-wrap items-center gap-1">
+                      {u.status === "menunggu" && (
+                        <form action={resendInvite}>
+                          <input type="hidden" name="email" value={u.email ?? ""} />
+                          <input type="hidden" name="back" value={back} />
+                          <SubmitButton size="sm" variant="ghost" pendingText="Mengirim…">
+                            <Send className="size-3.5" aria-hidden /> Kirim ulang undangan
+                          </SubmitButton>
+                        </form>
+                      )}
+                      {!isMe && (
+                        <form action={deleteUser}>
+                          <input type="hidden" name="user_id" value={u.id} />
+                          <input type="hidden" name="back" value={back} />
+                          <ConfirmSubmit
+                            message={`Hapus ${u.full_name} secara permanen? Akun login, role, jadwal, dan penilaiannya ikut terhapus. Tindakan ini tidak bisa dibatalkan.`}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="size-3.5" aria-hidden /> Hapus user
+                          </ConfirmSubmit>
+                        </form>
+                      )}
+                    </div>
                   </div>
                 </div>
               </details>

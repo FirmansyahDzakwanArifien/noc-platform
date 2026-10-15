@@ -112,3 +112,43 @@ export async function resendInvite(formData: FormData) {
   if (res.error) fail(back, res.error);
   done(back, `Undangan dikirim ulang ke ${email}.`);
 }
+
+// ---------------------------------------------------------------------------
+// Hapus user (edge function delete-user memakai service role)
+// ---------------------------------------------------------------------------
+const BLOCKER_LABEL: Record<string, string> = {
+  "handovers.outgoing_by": "handover",
+  "handover_members.user_id": "keanggotaan handover",
+  "incident_updates.created_by": "update incident",
+  "permits.requested_by": "izin site",
+  "permit_approvals.approver_id": "approval izin",
+  "projects.owner_id": "project",
+  "progress_updates.reported_by": "laporan progres",
+  "comments.author_id": "komentar",
+  "announcements.created_by": "pengumuman",
+  "schedule_periods.created_by": "periode jadwal",
+  "schedule_shares.created_by": "link jadwal",
+  "directory_shares.created_by": "link daftar anggota",
+};
+
+export async function deleteUser(formData: FormData) {
+  const back = backOf(formData);
+  const { supabase, auth } = await actionContext(back, "user.manage");
+  const userId = req(formData, "user_id", back);
+  if (userId === auth.userId) fail(back, "Anda tidak bisa menghapus akun sendiri.");
+
+  const { data, error } = await supabase.functions.invoke<{ ok?: boolean; name?: string }>("delete-user", { body: { user_id: userId } });
+  if (error) {
+    const ctx = (error as { context?: Response }).context;
+    const payload = (ctx ? await ctx.json().catch(() => null) : null) as { error?: string; blockers?: Record<string, number> } | null;
+    if (payload?.blockers) {
+      const list = Object.entries(payload.blockers)
+        .map(([k, n]) => `${n} ${BLOCKER_LABEL[k] ?? k}`)
+        .join(", ");
+      fail(back, `User tidak bisa dihapus karena masih tercatat di riwayat (${list}). Nonaktifkan akunnya saja agar riwayat tetap utuh.`);
+    }
+    fail(back, payload?.error ?? "Gagal menghapus user.");
+  }
+  revalidatePath("/admin/users");
+  done("/admin/users", `${data?.name ?? "User"} telah dihapus.`);
+}

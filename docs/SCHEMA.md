@@ -224,8 +224,10 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 | `comments` / `notifications` / `announcements` | Kolaborasi & informasi. |
 | `calendar_feeds` | Token rahasia feed iCal pribadi (`/ical/<token>.ics` di app Jadwal). Dibaca anon hanya lewat RPC `get_calendar_feed`. |
 | `directory_shares` | Link publik daftar anggota (`/d/<token>` di portal). Email/HP hanya tampil bila dicentang. Dibaca anon lewat RPC `get_shared_directory`. |
-| `review_criteria` | Aspek penilaian review bulanan (nilai 1–5). |
-| `performance_reviews` / `performance_review_scores` | Self review & peer review per bulan (`period_month` = tanggal 1). Ditulis hanya lewat RPC `submit_review` (bulan ini & bulan lalu). Peer review anonim bagi yang dinilai; nama penilai terlihat oleh `review.manage` dan lead tim pembina. Laporan: `monthly_report`, rekap: `review_overview`, tugas: `my_review_tasks`. |
+| `review_forms` | Formulir penilaian per jenis (`self` / `peer` / `supervisor`) + bobot dalam nilai akhir. |
+| `review_questions` / `review_options` | Pertanyaan per bagian. Tipe `scale` (rubrik berskor), `choice` (pilihan tanpa skor), `text`. `division_id` = khusus divisi. `evidence_rule` = bukti wajib untuk skor ekstrem / selalu. |
+| `review_submissions` / `review_answers` | Isian penilaian per bulan. Ditulis lewat RPC `review_submit`; label & skor disalin agar hasil lama utuh. Hanya penilai sendiri dan `review.manage` (admin & supervisor) yang bisa membaca. Rekap: `review_summary`, detail: `review_detail`, tugas: `review_tasks`. |
+| `review_criteria`, `performance_reviews` (lama) | Review skor 1–5 versi lama; tidak dipakai lagi. |
 
 **Notifikasi otomatis** (trigger → `notifications`): approver izin kerja ditunjuk/keputusan approval, cuti/izin/tukar shift baru (ke approver & rekan), rekan setuju/menolak tukar shift, handover diajukan/diterima/dikembalikan, task ditugaskan, incident ditugaskan & incident kritis baru. Aksi oleh diri sendiri tidak dinotifikasi.
 
@@ -263,4 +265,6 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 - `app_settings.division_isolation`: `false` = data digabung; `true` = user hanya melihat data divisinya + data umum (`can_see_division`). Pemegang `division.all` (admin, supervisor, lead) tetap melihat semua.
 - Incident keamanan (SOC): `incidents.category = 'keamanan'` + `security_type`, `mitre_technique`, `iocs`, `affected_assets`.
 - Kriteria review per divisi: `review_criteria.division_id` (null = semua divisi); dipakai lewat `review_criteria_for(user)`.
-- Lead saat ini mengontrol semua: `schedule.manage_all`, `review.manage`, `division.all`. Bisa dicabut lewat halaman Role & Akses.
+- Lead saat ini mengontrol jadwal & data semua divisi: `schedule.manage_all`, `division.all`. Hasil penilaian (`review.manage`) hanya untuk admin & supervisor.
+- Penilaian atasan: pemegang `review.evaluate` (supervisor) menilai peserta review yang rank-nya di bawah dirinya.
+- Hapus user: kolom referensi opsional menjadi `null`; user yang masih tercatat di riwayat wajib ditolak (`user_delete_blockers`) dan cukup dinonaktifkan. Penghapusan lewat edge function `delete-user`.
