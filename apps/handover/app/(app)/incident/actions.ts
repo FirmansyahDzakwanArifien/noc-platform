@@ -5,18 +5,28 @@ import { actionContext, dbError, done, fail, req, str } from "@noc/supabase/acti
 import { INCIDENT_CATEGORIES, INCIDENT_STATUSES, isOneOf, PRIORITIES, SECURITY_TYPES } from "@/lib/constants";
 import { isUuid, wibToIso } from "@/lib/util";
 
+type Ctx = Awaited<ReturnType<typeof actionContext>>;
+
 /**
- * Divisi, kategori & detail keamanan dari form. Detail keamanan dikosongkan bila kategori bukan
- * "keamanan" dan jenis serangan tidak diisi (mis. field tersembunyi yang tidak relevan).
+ * Divisi, kategori & detail keamanan dari form. Detail keamanan hanya disimpan bila bagiannya
+ * tampil di form (kategori "keamanan" atau divisi SOC) atau jenis serangan diisi; selain itu
+ * dikosongkan (field tersembunyi yang tidak relevan).
  */
-function classification(formData: FormData, back: string) {
+async function classification(supabase: Ctx["supabase"], formData: FormData, back: string) {
   const divisionId = str(formData, "division_id");
   if (divisionId !== null && !isUuid(divisionId)) fail(back, "Divisi tidak valid.");
+  let isSoc = false;
+  if (divisionId !== null) {
+    const { data: div, error: divErr } = await supabase.from("divisions").select("code").eq("id", divisionId).maybeSingle();
+    if (divErr) fail(back, dbError(divErr));
+    if (!div) fail(back, "Divisi tidak ditemukan.");
+    isSoc = (div as { code: string }).code.toUpperCase() === "SOC";
+  }
   const category = str(formData, "category") ?? "jaringan";
   if (!isOneOf(INCIDENT_CATEGORIES, category)) fail(back, "Kategori tidak valid.");
   const securityType = str(formData, "security_type");
   if (securityType !== null && !isOneOf(SECURITY_TYPES, securityType)) fail(back, "Jenis serangan tidak valid.");
-  const keepSecurity = category === "keamanan" || securityType !== null;
+  const keepSecurity = category === "keamanan" || isSoc || securityType !== null;
   return {
     division_id: divisionId,
     category,
@@ -45,7 +55,7 @@ export async function createIncident(formData: FormData) {
   const startedRaw = str(formData, "started_at");
   const startedAt = wibToIso(startedRaw);
   if (startedRaw && !startedAt) fail(back, "Waktu mulai tidak valid.");
-  const cls = classification(formData, back);
+  const cls = await classification(supabase, formData, back);
 
   const { data, error } = await supabase
     .from("incidents")
@@ -118,7 +128,7 @@ export async function updateIncident(formData: FormData) {
   const { supabase } = await actionContext(back, "incident.manage");
   const severity = str(formData, "severity") ?? "medium";
   if (!isOneOf(PRIORITIES, severity)) fail(back, "Severity tidak valid.");
-  const cls = classification(formData, back);
+  const cls = await classification(supabase, formData, back);
 
   const { error } = await supabase
     .from("incidents")

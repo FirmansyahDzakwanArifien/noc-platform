@@ -2,8 +2,11 @@ const TZ = "Asia/Jakarta";
 
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return "-";
-  const d = typeof value === "string" && value.length === 10 ? new Date(value + "T00:00:00") : new Date(value);
-  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: TZ });
+  // Tanggal murni (YYYY-MM-DD) tidak punya zona: format apa adanya agar tidak bergeser sehari.
+  if (typeof value === "string" && value.length === 10) {
+    return new Date(value + "T12:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+  }
+  return new Date(value).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: TZ });
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {

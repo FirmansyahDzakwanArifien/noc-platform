@@ -98,7 +98,7 @@ export default async function PermitDetailPage({
   const canCheckin = auth.can("permit.checkin") && ["approved", "active"].includes(status);
   const canComplete = canManage && ["approved", "active"].includes(status);
 
-  const [names, approverOptions] = await Promise.all([
+  const [names, approverOptions, approverIdsRes] = await Promise.all([
     profileNames(supabase, [
       permit.requested_by,
       permit.pic_internal,
@@ -108,8 +108,13 @@ export default async function PermitDetailPage({
     canSetApproval
       ? supabase.from("profiles").select("id, full_name").eq("is_active", true).is("vendor_id", null).order("full_name")
       : Promise.resolve({ data: [] }),
+    // Hanya user dengan hak permit.approve yang bisa memutuskan langkah approval.
+    canSetApproval ? supabase.rpc("users_with_permission", { p_perm: "permit.approve" }) : Promise.resolve({ data: null, error: null }),
   ]);
-  const approvers = (approverOptions.data ?? []) as { id: string; full_name: string }[];
+  const approverIds = approverIdsRes.error || !approverIdsRes.data ? null : new Set(approverIdsRes.data as string[]);
+  const approvers = ((approverOptions.data ?? []) as { id: string; full_name: string }[]).filter(
+    (p) => !approverIds || approverIds.has(p.id),
+  );
 
   const personName = new Map(personnel.map((p) => [p.id, p.full_name]));
   const onSite = new Set(visits.filter((v) => !v.check_out_at && v.personnel_id).map((v) => v.personnel_id!));

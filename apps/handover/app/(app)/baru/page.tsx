@@ -138,7 +138,7 @@ export default async function NewHandoverPage({
               <span>
                 <span className="font-medium text-slate-900">Bawa item yang belum selesai</span>
                 <span className="block text-xs text-slate-500">
-                  Item berstatus Open / Dikerjakan dari handover terakhir di site yang sama akan disalin ke handover ini.
+                  Item berstatus Open / Dikerjakan dari handover terakhir di site &amp; divisi yang sama akan disalin ke handover ini.
                 </span>
               </span>
             </label>

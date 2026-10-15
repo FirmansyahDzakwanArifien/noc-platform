@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@noc/supabase/client";
-import { ALLOWED_SIGNUP_DOMAINS, isEmailAllowed } from "@noc/supabase/env";
+import { safeNextUrl } from "@noc/supabase/apps";
+import { ALLOWED_SIGNUP_DOMAINS } from "@noc/supabase/env";
 import { Alert, Button, Field, Input } from "@noc/ui";
 import { callbackUrl } from "../../../lib/callback-url";
 
@@ -20,10 +21,8 @@ export function SignupForm({ next }: { next: string }) {
     const password = String(form.get("password"));
     const confirm = String(form.get("confirm"));
 
-    if (!isEmailAllowed(email)) {
-      setError(`Pendaftaran hanya untuk email ${ALLOWED_SIGNUP_DOMAINS.map((d) => "@" + d).join(" atau ")}.`);
-      return;
-    }
+    // Allowlist ditegakkan di database (auth hook) dan bisa ditambah admin lewat menu Allowlist,
+    // jadi tidak diblok di sini berdasarkan daftar domain statis.
     if (password.length < 8) {
       setError("Password minimal 8 karakter.");
       return;
@@ -42,11 +41,15 @@ export function SignupForm({ next }: { next: string }) {
     });
     setLoading(false);
     if (error) {
-      setError(/database error/i.test(error.message) ? "Email ini tidak diizinkan untuk mendaftar." : error.message);
+      setError(
+        /database error|tidak diizinkan|not allowed/i.test(error.message)
+          ? "Email ini tidak diizinkan untuk mendaftar. Minta admin menambahkannya ke allowlist."
+          : error.message,
+      );
       return;
     }
     if (data.session) {
-      window.location.href = "/";
+      window.location.href = safeNextUrl(next);
       return;
     }
     setSentTo(email);
@@ -71,7 +74,7 @@ export function SignupForm({ next }: { next: string }) {
       <div>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-slate-900">Daftar akun</h1>
         <p className="mt-1 text-xs text-slate-500">
-          Khusus email {ALLOWED_SIGNUP_DOMAINS.map((d) => "@" + d).join(" / ")}. Role awal: viewer, admin akan menyesuaikan akses Anda.
+          Khusus email {ALLOWED_SIGNUP_DOMAINS.map((d) => "@" + d).join(" / ")} atau email yang sudah didaftarkan admin. Admin akan menyesuaikan akses Anda.
         </p>
       </div>
       {error && <Alert tone="error">{error}</Alert>}

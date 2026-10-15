@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { actionContext, dbError, fail, req } from "@noc/supabase/actions";
 
 const back = "/admin/roles";
@@ -22,4 +23,6 @@ export async function togglePermission(formData: FormData) {
     : await supabase.from("role_permissions").insert({ role_id: roleId, permission_key: permissionKey });
   if (error) fail(back, dbError(error));
   revalidatePath(back);
+  // Bersihkan ?error= lama dari URL agar pesan gagal sebelumnya tidak terus tampil.
+  redirect(back);
 }

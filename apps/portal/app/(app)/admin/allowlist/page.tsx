@@ -30,12 +30,15 @@ export default async function AllowlistPage({ searchParams }: { searchParams: Pr
   const auth = await requireAuth();
   if (!auth.can("user.manage")) return <Forbidden />;
   const supabase = await createClient();
-  const [{ data: emails }, { data: domains }, { data: roles }] = await Promise.all([
+  const [{ data: emails }, { data: domains }, { data: roles }, { data: myRank }] = await Promise.all([
     supabase.from("allowed_signup_emails").select("*").order("email"),
     supabase.from("allowed_signup_domains").select("*").order("domain"),
     supabase.from("roles").select("*").order("rank", { ascending: false }),
+    supabase.rpc("my_max_rank"),
   ]);
   const roleList = (roles ?? []) as Role[];
+  const assignable = roleList.filter((r) => r.rank <= ((myRank as number | null) ?? 0));
+  const defaultRole = assignable.find((r) => r.key === "viewer")?.key ?? assignable[assignable.length - 1]?.key ?? "";
 
   const sections = [
     { kind: "domain" as const, title: "Domain", hint: "Semua email dengan domain ini boleh mendaftar (dicocokkan persis, tanpa subdomain).", rows: (domains ?? []) as Entry[], placeholder: "jarvis.biz.id" },
@@ -96,8 +99,8 @@ export default async function AllowlistPage({ searchParams }: { searchParams: Pr
                 <Input name="value" required placeholder={s.placeholder} type={s.kind === "email" ? "email" : "text"} />
               </Field>
               <Field label="Role awal">
-                <Select name="default_role" defaultValue="viewer">
-                  {roleList.map((r) => (
+                <Select name="default_role" defaultValue={defaultRole}>
+                  {assignable.map((r) => (
                     <option key={r.key} value={r.key}>
                       {r.name}
                     </option>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { actionContext, bool, dbError, done, fail, req, str } from "@noc/supabase/actions";
 import type { HandoverItem, Shift, ShiftSchedule } from "@noc/supabase/types";
+import { loadMyDivision } from "@/lib/data";
 import { addDays, isDate, isUuid } from "@/lib/util";
 
 export async function createHandover(formData: FormData) {
@@ -29,15 +30,28 @@ export async function createHandover(formData: FormData) {
   // Shift tujuan mulai lebih awal dari shift asal (mis. Malam → Pagi) → jadwal penerima ada di hari berikutnya.
   const incomingDate = (to.start_time ?? "") < (from.start_time ?? "") ? addDays(shiftDate, 1) : shiftDate;
 
+  // Divisi handover = divisi pembuat (diisi trigger DB). Jadwal & item bawaan dibatasi ke divisi yang sama
+  // agar anggota/penerima/item dari divisi lain (mis. SOC vs NOC di shift yang sama) tidak ikut terbawa.
+  const myDivision = await loadMyDivision(supabase);
+
   // Jadwal (RLS: hanya periode published kecuali schedule.manage). Gagal baca jadwal bukan error fatal.
+  type SchedRow = ShiftSchedule & { schedule_periods: { teams: { division_id: string | null } | null } | null };
   const schedQuery = (date: string, shiftId: string) => {
-    let q = supabase.from("shift_schedules").select("*").eq("work_date", date).eq("shift_id", shiftId);
+    let q = supabase
+      .from("shift_schedules")
+      .select("*, schedule_periods(teams(division_id))")
+      .eq("work_date", date)
+      .eq("shift_id", shiftId);
     if (siteId) q = q.or(`site_id.eq.${siteId},site_id.is.null`);
     return q;
   };
+  const sameDivision = (s: SchedRow) => {
+    const div = s.schedule_periods?.teams?.division_id ?? null;
+    return !myDivision || !div || div === myDivision;
+  };
   const [outSched, inSched] = await Promise.all([schedQuery(shiftDate, fromShiftId), schedQuery(incomingDate, toShiftId)]);
-  const outgoing = (outSched.data as ShiftSchedule[] | null) ?? [];
-  const incoming = (inSched.data as ShiftSchedule[] | null) ?? [];
+  const outgoing = ((outSched.data as SchedRow[] | null) ?? []).filter(sameDivision);
+  const incoming = ((inSched.data as SchedRow[] | null) ?? []).filter(sameDivision);
 
   if (!incomingBy) {
     incomingBy = incoming.find((s) => s.is_leader && s.user_id !== auth.userId)?.user_id ?? null;
@@ -57,10 +71,10 @@ export async function createHandover(formData: FormData) {
       notes: str(formData, "notes"),
       status: "draft",
     })
-    .select("id")
+    .select("id, division_id")
     .single();
   if (error || !created) fail(back, dbError(error));
-  const id = (created as { id: string }).id;
+  const { id, division_id: divisionId } = created as { id: string; division_id: string | null };
   const warnings: string[] = [];
 
   // Anggota tim
@@ -86,6 +100,7 @@ export async function createHandover(formData: FormData) {
       .order("created_at", { ascending: false })
       .limit(1);
     prevQ = siteId ? prevQ.eq("site_id", siteId) : prevQ.is("site_id", null);
+    prevQ = divisionId ? prevQ.eq("division_id", divisionId) : prevQ.is("division_id", null);
     const { data: prev } = await prevQ.maybeSingle();
     if (prev) {
       const { data: openItems } = await supabase

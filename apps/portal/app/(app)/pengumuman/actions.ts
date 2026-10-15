@@ -9,7 +9,7 @@ const wib = (v: string | null) => (v ? `${v}:00+07:00` : null);
 /** Buat (tanpa id) atau ubah (dengan id) pengumuman. */
 export async function saveAnnouncement(formData: FormData) {
   const id = str(formData, "id");
-  const self = id ? `${back}?edit=${id}` : back;
+  const self = id ? `${back}?edit=${id}` : `${back}?baru=1`;
   const { supabase, auth } = await actionContext(self, "announcement.manage");
   const publish = wib(str(formData, "publish_at"));
   const expire = wib(str(formData, "expire_at"));

@@ -50,10 +50,15 @@ Deno.serve(async (req) => {
   if (body.resend === true) {
     const { data: prof } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
     if (!prof) return json({ error: "User tidak ditemukan." }, 404);
-    const { data: u } = await admin.auth.admin.getUserById(prof.id);
-    if (u.user?.last_sign_in_at) return json({ error: "User ini sudah pernah masuk, undangan tidak perlu dikirim ulang." }, 409);
+    const { data: pending } = await admin.rpc("invite_pending", { p_user: prof.id });
+    if (!pending) return json({ error: "User ini sudah membuat password, undangan tidak perlu dikirim ulang." }, 409);
     const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
-    if (error) return json({ error: error.message }, 400);
+    if (error) {
+      // Link undangan lama sudah pernah dibuka (email terkonfirmasi): kirim link atur password.
+      const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
+      const { error: recErr } = await anon.auth.resetPasswordForEmail(email, { redirectTo });
+      if (recErr) return json({ error: recErr.message }, 400);
+    }
     return json({ ok: true, resent: true });
   }
 

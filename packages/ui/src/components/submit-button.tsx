@@ -7,7 +7,7 @@ import { Button, type ButtonProps } from "./button";
 export function SubmitButton({ children, pendingText = "Menyimpan…", ...props }: ButtonProps & { pendingText?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending || props.disabled} {...props}>
+    <Button type="submit" {...props} disabled={pending || props.disabled}>
       {pending ? pendingText : children}
     </Button>
   );

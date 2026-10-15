@@ -225,20 +225,11 @@ export async function decideApproval(formData: FormData) {
   if (!updated || updated.length === 0) fail(back, "Keputusan tidak tersimpan (mungkin sudah diputuskan).");
 
   const after = all.map((s) => (s.id === approvalId ? { ...s, decision } : s));
-  let permitUpdate: Record<string, unknown> | null = null;
-  if (after.some((s) => s.decision === "rejected")) permitUpdate = { status: "rejected", closed_at: now };
-  else if (after.every((s) => s.decision === "approved")) permitUpdate = { status: "approved", approved_at: now };
-
-  if (permitUpdate) {
-    const err = await updatePermit(supabase, permitId, permitUpdate);
-    if (err) {
-      refresh(permitId);
-      fail(
-        back,
-        "Keputusan Anda tersimpan, tetapi status izin belum dapat diperbarui (perlu hak kelola izin). " +
-          "Mohon minta pengelola izin memperbarui statusnya.",
-      );
-    }
+  // Status izin (rejected / approved + approved_at) sudah diubah trigger tg_permit_approval_decided.
+  // Di sini hanya melengkapi closed_at untuk penolakan; approver tanpa hak kelola izin tidak bisa
+  // mengubah baris permits (RLS) dan itu tidak masalah karena statusnya sudah benar.
+  if (after.some((s) => s.decision === "rejected") && auth.can("permit.manage")) {
+    await updatePermit(supabase, permitId, { closed_at: now });
   }
   refresh(permitId);
   done(back, decision === "approved" ? "Izin disetujui." : "Izin ditolak.");
@@ -279,13 +270,7 @@ export async function checkIn(formData: FormData) {
   });
   if (error) fail(back, dbError(error));
 
-  if (permit.status === "approved") {
-    const err = await updatePermit(supabase, id, { status: "active" });
-    if (err) {
-      refresh(id);
-      done(back, "Check-in tercatat. Status izin belum dapat diubah ke Aktif (perlu hak kelola izin).");
-    }
-  }
+  // Status approved → active diubah otomatis oleh trigger tg_permit_first_checkin.
   refresh(id);
   done(back, "Check-in tercatat.");
 }

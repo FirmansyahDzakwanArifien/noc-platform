@@ -66,6 +66,20 @@ export async function submitHandover(formData: FormData) {
         .filter((t): t is string => !!t),
     ),
   ];
+  if (!templateIds.length) {
+    // Checklist belum diisi sama sekali → pakai template default yang ditampilkan di halaman detail
+    // (aktif, site cocok; urutan: divisi handover → semua divisi, lalu nama). Template divisi lain tidak diwajibkan.
+    const { data: tpls } = await supabase
+      .from("checklist_templates")
+      .select("id, site_id, division_id")
+      .eq("is_active", true)
+      .order("name");
+    const rank = (t: { division_id: string | null }) => (t.division_id && t.division_id === h.division_id ? 0 : !t.division_id ? 1 : 2);
+    const def = ((tpls ?? []) as { id: string; site_id: string | null; division_id: string | null }[])
+      .filter((t) => (!t.site_id || t.site_id === h.site_id) && rank(t) < 2)
+      .sort((a, b) => rank(a) - rank(b))[0];
+    if (def) templateIds.push(def.id);
+  }
   if (templateIds.length) {
     const { data: reqItems } = await supabase
       .from("checklist_template_items")

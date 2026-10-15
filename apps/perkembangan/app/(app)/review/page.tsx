@@ -164,8 +164,8 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
                     </td>
                     <td className="px-3 py-3 text-center tabular-nums text-slate-700">{o.peers_received}</td>
                     <td className="px-3 py-3 text-center tabular-nums text-slate-700">{o.peers_given}</td>
-                    <td className={cn("px-3 py-3 text-center font-semibold tabular-nums", scoreTone(o.self_avg))}>{o.self_avg?.toFixed(1) ?? "–"}</td>
-                    <td className={cn("px-5 py-3 text-center font-semibold tabular-nums", scoreTone(o.peer_avg))}>{o.peer_avg?.toFixed(1) ?? "–"}</td>
+                    <td className={cn("px-3 py-3 text-center font-semibold tabular-nums", scoreTone(o.self_avg != null ? Number(o.self_avg) : null))}>{o.self_avg != null ? Number(o.self_avg).toFixed(1) : "–"}</td>
+                    <td className={cn("px-5 py-3 text-center font-semibold tabular-nums", scoreTone(o.peer_avg != null ? Number(o.peer_avg) : null))}>{o.peer_avg != null ? Number(o.peer_avg).toFixed(1) : "–"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@noc/supabase/client";
 import { safeNextUrl } from "@noc/supabase/apps";
@@ -13,6 +13,15 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
   const [error, setError] = useState<string | null>(initialError ?? null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Link undangan yang jatuh ke Site URL (redirect /undangan belum di-allowlist di Supabase Auth)
+  // berakhir di sini lewat middleware dengan token di hash → teruskan ke halaman undangan.
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (hash.get("type") === "invite" && hash.get("access_token")) {
+      window.location.replace(`/undangan${window.location.hash}`);
+    }
+  }, []);
 
   async function onPassword(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

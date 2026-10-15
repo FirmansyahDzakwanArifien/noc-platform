@@ -29,12 +29,20 @@ export async function createLeave(formData: FormData) {
     if (swapWith === auth.userId) fail(back, "Tidak bisa tukar shift dengan diri sendiri.");
     const { data: sched, error } = await supabase
       .from("v_my_schedule")
-      .select("id, work_date, is_working")
+      .select("id, work_date, is_working, period_id")
       .eq("id", swapScheduleId)
       .maybeSingle();
     if (error) fail(back, dbError(error));
-    const s = sched as { id: string; work_date: string; is_working: boolean } | null;
+    const s = sched as { id: string; work_date: string; is_working: boolean; period_id: string } | null;
     if (!s || !s.is_working) fail(back, "Jadwal tidak ditemukan atau bukan jadwal kerja Anda.");
+    // Pengelola jadwal bisa membaca jadwal draft; tukar shift hanya untuk jadwal yang sudah dipublikasikan.
+    const { data: period } = await supabase
+      .from("schedule_periods")
+      .select("id")
+      .eq("id", s.period_id)
+      .eq("status", "published")
+      .maybeSingle();
+    if (!period) fail(back, "Jadwal ini belum dipublikasikan sehingga belum bisa ditukar.");
     if (s.work_date < toDateInput()) fail(back, "Jadwal yang sudah lewat tidak bisa ditukar.");
     startDate = s.work_date;
     endDate = s.work_date;

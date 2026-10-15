@@ -4,7 +4,7 @@ import { createClient } from "@noc/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, cn, Forbidden, PageHeader } from "@noc/ui";
 import { ArrowLeft, CalendarCheck2, ChevronLeft, ChevronRight, CircleCheckBig, Crown, Handshake, Plane, Send, Siren } from "lucide-react";
 import { first, isUuid } from "@/lib/data";
-import { type Criterion, currentYm, isYm, scoreTone, shiftYm, ymLabel, ymToDate } from "@/lib/review";
+import { type Criterion, currentYm, isYm, isYmOpen, scoreTone, shiftYm, ymLabel, ymToDate } from "@/lib/review";
 
 export const metadata = { title: "Laporan Bulanan" };
 
@@ -45,10 +45,11 @@ export default async function MonthlyReportPage({ searchParams }: { searchParams
   const { data, error } = await supabase.rpc("monthly_report", { p_user: userId, p_month: ymToDate(ym) });
   if (error || !data) return <Forbidden message="Anda tidak memiliki akses ke laporan ini." />;
   const r = data as Report;
+  if (!r.user) return <Forbidden message="Pengguna tidak ditemukan." />;
   const isMine = userId === auth.userId;
 
   const selfScores = r.self?.scores ?? {};
-  const selfAvg = avg(Object.values(selfScores));
+  const selfAvg = avg(Object.values(selfScores).map(Number));
   const peerAvg = avg(Object.values(r.peer_avg ?? {}).map(Number));
   const nav = (delta: number) => `/review/laporan?bulan=${shiftYm(ym, delta)}${isMine ? "" : `&user=${userId}`}`;
 
@@ -164,7 +165,7 @@ export default async function MonthlyReportPage({ searchParams }: { searchParams
             ) : (
               <p className="text-sm text-slate-500">
                 Belum diisi.{" "}
-                {isMine && (
+                {isMine && isYmOpen(ym) && (
                   <Link href={`/review/isi?bulan=${ym}&untuk=${auth.userId}`} className="font-medium text-brand-600 hover:underline">
                     Isi sekarang
                   </Link>

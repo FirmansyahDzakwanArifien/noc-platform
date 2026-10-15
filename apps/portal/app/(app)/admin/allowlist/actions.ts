@@ -12,6 +12,14 @@ export async function addEntry(formData: FormData) {
   const defaultRole = str(formData, "default_role") ?? "viewer";
   const note = str(formData, "note");
 
+  // Role awal tidak boleh melebihi role pengisi (allowlist dipakai saat pendaftaran → bisa jadi jalan pintas naik role).
+  const [{ data: role }, { data: myRank }] = await Promise.all([
+    supabase.from("roles").select("rank").eq("key", defaultRole).maybeSingle(),
+    supabase.rpc("my_max_rank"),
+  ]);
+  if (!role) fail(back, "Role awal tidak valid.");
+  if ((role as { rank: number }).rank > ((myRank as number | null) ?? 0)) fail(back, "Role awal tidak boleh di atas role Anda.");
+
   if (kind === "domain") {
     if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(value)) fail(back, "Format domain tidak valid.");
     const { error } = await supabase.from("allowed_signup_domains").insert({ domain: value, default_role: defaultRole, note });

@@ -125,13 +125,13 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
             );
           })}
         </nav>
-        <form action="/admin/users" className="flex gap-2">
+        <form action="/admin/users" className="flex flex-wrap gap-2 sm:flex-nowrap">
           {sp.status && <input type="hidden" name="status" value={sp.status} />}
-          <div className="relative flex-1 lg:w-64">
+          <div className="relative min-w-0 basis-full sm:flex-1 sm:basis-auto lg:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
             <Input name="q" defaultValue={sp.q} placeholder="Cari nama atau email…" className="pl-9" />
           </div>
-          <Select name="tim" defaultValue={sp.tim ?? ""} className="w-36" aria-label="Filter tim">
+          <Select name="tim" defaultValue={sp.tim ?? ""} className="min-w-0 flex-1 sm:w-36 sm:flex-none" aria-label="Filter tim">
             <option value="">Semua tim</option>
             <option value="none">Tanpa tim</option>
             {teamList.map((t) => (
@@ -194,7 +194,9 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
                     <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset", STATUS_STYLE[u.status])}>
                       {STATUS_LABEL[u.status]}
                     </span>
-                    <span className="text-xs text-slate-400">Masuk {relative(u.lastSignIn)}</span>
+                    <span className="text-xs text-slate-400">
+                      {u.status === "menunggu" ? `Diundang ${relative(u.invitedAt)}` : `Masuk ${relative(u.lastSignIn)}`}
+                    </span>
                   </div>
 
                   <section>

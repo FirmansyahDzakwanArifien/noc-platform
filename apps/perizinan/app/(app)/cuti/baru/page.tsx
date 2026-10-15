@@ -54,11 +54,11 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
     const [s, p, x] = await Promise.all([
       supabase
         .from("v_my_schedule")
-        .select("id, work_date, shift_name, start_time, end_time, site_name")
+        .select("id, work_date, shift_name, start_time, end_time, site_name, period_id")
         .gte("work_date", today)
         .eq("is_working", true)
         .order("work_date")
-        .limit(60),
+        .limit(120),
       supabase
         .from("profiles")
         .select("id, full_name")
@@ -68,7 +68,14 @@ export default async function NewLeavePage({ searchParams }: { searchParams: Sea
         .order("full_name"),
       supabase.rpc("unschedulable_users"),
     ]);
-    schedules = (s.data ?? []) as MySchedule[];
+    // Pengelola jadwal juga bisa membaca periode draft (RLS) → hanya jadwal dari periode yang dipublikasikan.
+    const mine = (s.data ?? []) as (MySchedule & { period_id: string })[];
+    const periodIds = [...new Set(mine.map((r) => r.period_id))];
+    const { data: pub } = periodIds.length
+      ? await supabase.from("schedule_periods").select("id").in("id", periodIds).eq("status", "published")
+      : { data: [] };
+    const published = new Set(((pub ?? []) as { id: string }[]).map((p) => p.id));
+    schedules = mine.filter((r) => published.has(r.period_id)).slice(0, 60);
     // Administrator/Supervisor tidak masuk jadwal, jadi tidak bisa jadi rekan tukar shift.
     const excluded = new Set((x.data as string[] | null) ?? []);
     colleagues = ((p.data ?? []) as { id: string; full_name: string }[]).filter((c) => !excluded.has(c.id));

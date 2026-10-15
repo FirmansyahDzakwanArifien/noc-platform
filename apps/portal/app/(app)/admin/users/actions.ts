@@ -15,6 +15,16 @@ export async function updateUser(formData: FormData) {
   const isActive = bool(formData, "is_active");
   if (userId === auth.userId && !isActive) fail(back, "Anda tidak bisa menonaktifkan akun sendiri.");
 
+  // RLS profiles hanya mensyaratkan user.manage; cegah mengubah user dengan role lebih tinggi.
+  if (userId !== auth.userId) {
+    const [{ data: theirRoles }, { data: myRank }] = await Promise.all([
+      supabase.from("user_roles").select("roles(rank)").eq("user_id", userId),
+      supabase.rpc("my_max_rank"),
+    ]);
+    const theirRank = Math.max(0, ...((theirRoles ?? []) as unknown as { roles: { rank: number } | null }[]).map((r) => r.roles?.rank ?? 0));
+    if (theirRank > ((myRank as number | null) ?? 0)) fail(back, "Anda tidak bisa mengubah user dengan role lebih tinggi dari role Anda.");
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ team_id: str(formData, "team_id"), is_active: isActive })
