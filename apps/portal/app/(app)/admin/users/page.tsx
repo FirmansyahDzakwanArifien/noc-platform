@@ -3,7 +3,7 @@ import { requireAuth } from "@noc/supabase/auth";
 import { createClient } from "@noc/supabase/server";
 import type { Profile, Role, Team } from "@noc/supabase/types";
 import { Badge, buttonClass, Card, cn, EmptyState, Flash, Forbidden, Input, PageHeader, Select, SubmitButton } from "@noc/ui";
-import { ChevronDown, MailPlus, Search, Send, X } from "lucide-react";
+import { ChevronDown, MailPlus, Search, Send, Share2, X } from "lucide-react";
 import { addRole, removeRole, resendInvite, updateUser } from "./actions";
 
 export const metadata = { title: "User" };
@@ -93,9 +93,14 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
         title="User"
         description="Kelola akun, role, dan tim. Anda hanya bisa memberi role setara atau di bawah role Anda."
         actions={
-          <Link href="/admin/users/undang" className={buttonClass("primary")}>
-            <MailPlus className="size-4" aria-hidden /> Undang user
-          </Link>
+          <>
+            <Link href="/admin/users/bagikan" className={buttonClass("secondary")}>
+              <Share2 className="size-4" aria-hidden /> Bagikan daftar
+            </Link>
+            <Link href="/admin/users/undang" className={buttonClass("primary")}>
+              <MailPlus className="size-4" aria-hidden /> Undang user
+            </Link>
+          </>
         }
       />
       <Flash searchParams={sp} />

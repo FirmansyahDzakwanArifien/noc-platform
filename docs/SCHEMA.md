@@ -223,6 +223,7 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 | `attachments` | Metadata file di bucket Storage `attachments` (private). |
 | `comments` / `notifications` / `announcements` | Kolaborasi & informasi. |
 | `calendar_feeds` | Token rahasia feed iCal pribadi (`/ical/<token>.ics` di app Jadwal). Dibaca anon hanya lewat RPC `get_calendar_feed`. |
+| `directory_shares` | Link publik daftar anggota (`/d/<token>` di portal). Email/HP hanya tampil bila dicentang. Dibaca anon lewat RPC `get_shared_directory`. |
 | `review_criteria` | Aspek penilaian review bulanan (nilai 1–5). |
 | `performance_reviews` / `performance_review_scores` | Self review & peer review per bulan (`period_month` = tanggal 1). Ditulis hanya lewat RPC `submit_review` (bulan ini & bulan lalu). Peer review anonim bagi yang dinilai; nama penilai terlihat oleh `review.manage` dan lead tim pembina. Laporan: `monthly_report`, rekap: `review_overview`, tugas: `my_review_tasks`. |
 
