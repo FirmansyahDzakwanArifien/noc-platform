@@ -20,13 +20,35 @@ import {
   TR,
 } from "@noc/ui";
 import { Plus } from "lucide-react";
-import { INCIDENT_STATUSES, isOneOf, PRIORITIES, SEVERITY_COLOR, type Incident } from "@/lib/constants";
-import { loadProfiles, loadSites } from "@/lib/data";
+import { DivisionBadge } from "@/components/division-badge";
+import {
+  INCIDENT_CATEGORIES,
+  incidentCategoryLabel,
+  INCIDENT_STATUSES,
+  isOneOf,
+  PRIORITIES,
+  SEVERITY_COLOR,
+  type Incident,
+} from "@/lib/constants";
+import { loadDivisions, loadProfiles, loadSites } from "@/lib/data";
 import { first } from "@/lib/util";
 
 export const metadata = { title: "Incident" };
 
-type Row = Pick<Incident, "id" | "ticket_no" | "title" | "severity" | "status" | "site_id" | "affected_service" | "started_at" | "assigned_to">;
+type Row = Pick<
+  Incident,
+  | "id"
+  | "ticket_no"
+  | "title"
+  | "severity"
+  | "status"
+  | "site_id"
+  | "affected_service"
+  | "started_at"
+  | "assigned_to"
+  | "division_id"
+  | "category"
+>;
 
 export default async function IncidentListPage({
   searchParams,
@@ -39,17 +61,25 @@ export default async function IncidentListPage({
 
   const status = first(sp.status) ?? "";
   const severity = first(sp.severity) ?? "";
-  const filtered = !!(status || severity);
+  const divisi = first(sp.divisi) ?? "";
+  const kategori = first(sp.kategori) ?? "";
+  const filtered = !!(status || severity || divisi || kategori);
 
   const supabase = await createClient();
+  const divisions = await loadDivisions(supabase);
   let q = supabase
     .from("incidents")
-    .select("id, ticket_no, title, severity, status, site_id, affected_service, started_at, assigned_to")
+    .select("id, ticket_no, title, severity, status, site_id, affected_service, started_at, assigned_to, division_id, category")
     .order("started_at", { ascending: false })
     .limit(200);
   if (status === "active") q = q.not("status", "in", "(resolved,closed)");
   else if (isOneOf(INCIDENT_STATUSES, status)) q = q.eq("status", status);
   if (isOneOf(PRIORITIES, severity)) q = q.eq("severity", severity);
+  // ?divisi=<kode divisi> atau ?divisi=umum (tanpa divisi).
+  const divisionFilter = divisions.byCode(divisi);
+  if (divisi === "umum") q = q.is("division_id", null);
+  else if (divisionFilter) q = q.eq("division_id", divisionFilter.id);
+  if (isOneOf(INCIDENT_CATEGORIES, kategori)) q = q.eq("category", kategori);
   const [{ data }, profiles, sites] = await Promise.all([q, loadProfiles(supabase), loadSites(supabase)]);
   const rows = (data as Row[] | null) ?? [];
   const canManage = auth.can("incident.manage");
@@ -92,6 +122,27 @@ export default async function IncidentListPage({
             ))}
           </Select>
         </div>
+        <div className="w-full sm:w-40">
+          <Select name="divisi" defaultValue={divisionFilter?.code ?? (divisi === "umum" ? "umum" : "")} aria-label="Divisi">
+            <option value="">Semua divisi</option>
+            {divisions.list.map((d) => (
+              <option key={d.id} value={d.code}>
+                {d.code} · {d.name}
+              </option>
+            ))}
+            <option value="umum">Umum</option>
+          </Select>
+        </div>
+        <div className="w-full sm:w-40">
+          <Select name="kategori" defaultValue={kategori} aria-label="Kategori">
+            <option value="">Semua kategori</option>
+            {INCIDENT_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </div>
         <button type="submit" className={buttonClass("secondary")}>
           Terapkan
         </button>
@@ -106,7 +157,7 @@ export default async function IncidentListPage({
         filtered ? (
           <EmptyState
             title="Tidak ada incident yang cocok"
-            description="Coba ubah atau reset filter status dan severity."
+            description="Coba ubah atau reset filter status, severity, divisi, dan kategori."
             action={
               <Link href="/incident" className={buttonClass("secondary")}>
                 Reset filter
@@ -145,9 +196,17 @@ export default async function IncidentListPage({
                   <TD className="relative sm:min-w-64">
                     {/* Garis warna severity */}
                     <span className={cn("absolute inset-y-2 left-0 w-1 rounded-r", SEVERITY_COLOR[i.severity])} aria-hidden />
-                    <Link href={`/incident/${i.id}`} className="font-medium text-brand-600 hover:underline">
-                      {i.ticket_no ?? "INC"}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Link href={`/incident/${i.id}`} className="font-medium text-brand-600 hover:underline">
+                        {i.ticket_no ?? "INC"}
+                      </Link>
+                      <DivisionBadge code={divisions.code(i.division_id)} />
+                      {i.category && (
+                        <span className={cn("text-xs", i.category === "keamanan" ? "font-medium text-violet-700" : "text-slate-500")}>
+                          {incidentCategoryLabel(i.category)}
+                        </span>
+                      )}
+                    </div>
                     <p className={cn("break-words", isDone(i.status) ? "text-slate-500" : "text-slate-900")}>{i.title}</p>
                     {i.affected_service && <p className="text-xs text-slate-500">Terdampak: {i.affected_service}</p>}
                     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 md:hidden">

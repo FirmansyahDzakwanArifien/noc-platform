@@ -37,6 +37,8 @@ export type Site = {
   is_active: boolean;
 };
 
+export type Division = { id: string; code: string; name: string; sort_order: number };
+
 export type Team = { id: string; name: string; description: string | null; managed_by_team_id: string | null; division_id: string | null };
 
 export type Vendor = {
@@ -110,6 +112,8 @@ export type Handover = {
   submitted_at: string | null;
   acknowledged_at: string | null;
   ack_note: string | null;
+  /** Divisi pembuat (diisi trigger DB). */
+  division_id?: string | null;
   created_at: string;
 };
 
@@ -128,7 +132,14 @@ export type HandoverItem = {
   sort_order: number;
 };
 
-export type ChecklistTemplate = { id: string; name: string; site_id: string | null; is_active: boolean };
+export type ChecklistTemplate = {
+  id: string;
+  name: string;
+  site_id: string | null;
+  /** null = berlaku untuk semua divisi. */
+  division_id?: string | null;
+  is_active: boolean;
+};
 
 export type ChecklistTemplateItem = {
   id: string;

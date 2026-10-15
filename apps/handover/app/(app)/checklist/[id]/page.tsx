@@ -27,7 +27,8 @@ import {
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { INPUT_TYPES } from "@/lib/constants";
-import { loadSites } from "@/lib/data";
+import { DivisionBadge } from "@/components/division-badge";
+import { loadDivisions, loadSites } from "@/lib/data";
 import { isUuid } from "@/lib/util";
 import { addTemplateItem, deleteTemplateItem, toggleTemplate, updateTemplate } from "../actions";
 
@@ -47,16 +48,18 @@ export default async function ChecklistTemplateDetailPage({
   if (!isUuid(id)) notFound();
 
   const supabase = await createClient();
-  const [{ data: tpl }, { data: itemRows }, sites] = await Promise.all([
-    supabase.from("checklist_templates").select("id, name, site_id, is_active").eq("id", id).maybeSingle(),
+  const [{ data: tpl }, { data: itemRows }, sites, divisions] = await Promise.all([
+    supabase.from("checklist_templates").select("id, name, site_id, division_id, is_active").eq("id", id).maybeSingle(),
     supabase.from("checklist_template_items").select("*").eq("template_id", id).order("section", { nullsFirst: true }).order("sort_order"),
     loadSites(supabase),
+    loadDivisions(supabase),
   ]);
   if (!tpl) notFound();
   const t = tpl as ChecklistTemplate;
   const items = (itemRows as ChecklistTemplateItem[] | null) ?? [];
   const typeLabel = (v: string) => INPUT_TYPES.find((x) => x.value === v)?.label ?? v;
   const sections = [...new Set(items.map((i) => i.section).filter((s): s is string => !!s))];
+  const division = divisions.get(t.division_id);
   const nextSort = items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 10;
 
   return (
@@ -69,12 +72,13 @@ export default async function ChecklistTemplateDetailPage({
           title={
             <span className="flex flex-wrap items-center gap-2">
               {t.name}
+              <DivisionBadge code={division?.code} />
               <Badge tone={t.is_active ? "green" : "gray"}>{t.is_active ? "Aktif" : "Nonaktif"}</Badge>
             </span>
           }
           description={
             t.is_active
-              ? `Berlaku untuk: ${t.site_id ? `site ${sites.name(t.site_id)}` : "semua site"}. Diisi petugas di setiap handover.`
+              ? `Berlaku untuk: ${t.site_id ? `site ${sites.name(t.site_id)}` : "semua site"}, ${division ? `divisi ${division.code}` : "semua divisi"}. Diisi petugas di setiap handover.`
               : "Template nonaktif — tidak ditawarkan saat mengisi handover baru."
           }
           actions={
@@ -96,10 +100,20 @@ export default async function ChecklistTemplateDetailPage({
           <CardTitle>Pengaturan template</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={updateTemplate} className="grid gap-3 sm:grid-cols-[1fr_16rem_auto] sm:items-end">
+          <form action={updateTemplate} className="grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-[1fr_12rem_14rem_auto]">
             <input type="hidden" name="id" value={t.id} />
             <Field label="Nama template" required>
               <Input name="name" required defaultValue={t.name} />
+            </Field>
+            <Field label="Divisi">
+              <Select name="division_id" defaultValue={t.division_id ?? ""}>
+                <option value="">Semua divisi</option>
+                {divisions.list.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.code} · {d.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Berlaku untuk site">
               <Select name="site_id" defaultValue={t.site_id ?? ""}>

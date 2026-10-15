@@ -22,7 +22,8 @@ import {
   TR,
 } from "@noc/ui";
 import { ArrowRight, Plus } from "lucide-react";
-import { loadProfiles, loadShifts, loadSites } from "@/lib/data";
+import { DivisionBadge } from "@/components/division-badge";
+import { loadDivisions, loadProfiles, loadShifts, loadSites } from "@/lib/data";
 import { HANDOVER_STATUSES, isOneOf } from "@/lib/constants";
 import { first, isDate } from "@/lib/util";
 
@@ -30,7 +31,16 @@ export const metadata = { title: "Handover" };
 
 type Row = Pick<
   Handover,
-  "id" | "handover_no" | "shift_date" | "from_shift_id" | "to_shift_id" | "site_id" | "outgoing_by" | "incoming_by" | "status"
+    | "id"
+  | "handover_no"
+  | "shift_date"
+  | "from_shift_id"
+  | "to_shift_id"
+  | "site_id"
+  | "outgoing_by"
+  | "incoming_by"
+  | "status"
+  | "division_id"
 >;
 
 export default async function HandoverListPage({
@@ -50,7 +60,7 @@ export default async function HandoverListPage({
   const supabase = await createClient();
   let q = supabase
     .from("handovers")
-    .select("id, handover_no, shift_date, from_shift_id, to_shift_id, site_id, outgoing_by, incoming_by, status")
+    .select("id, handover_no, shift_date, from_shift_id, to_shift_id, site_id, outgoing_by, incoming_by, status, division_id")
     .order("shift_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(100);
@@ -70,13 +80,14 @@ export default async function HandoverListPage({
     .eq("status", "returned")
     .eq("outgoing_by", auth.userId);
 
-  const [{ data }, receive, fix, profiles, shifts, sites] = await Promise.all([
+  const [{ data }, receive, fix, profiles, shifts, sites, divisions] = await Promise.all([
     q,
     toReceive,
     toFix,
     loadProfiles(supabase),
     loadShifts(supabase),
     loadSites(supabase),
+    loadDivisions(supabase),
   ]);
   const rows = (data as Row[] | null) ?? [];
   const receiveCount = receive.count ?? 0;
@@ -164,7 +175,7 @@ export default async function HandoverListPage({
             description={
               canCreate
                 ? "Buat handover di akhir shift untuk menyerahkan kondisi jaringan, pekerjaan tertunda, dan checklist ke shift berikutnya."
-                : "Handover yang dibuat tim NOC akan tampil di sini."
+                : "Handover yang dibuat tim akan tampil di sini."
             }
             action={
               canCreate && (
@@ -198,9 +209,12 @@ export default async function HandoverListPage({
                 return (
                   <TR key={h.id}>
                     <TD>
-                      <Link href={`/${h.id}`} className="font-medium text-brand-600 hover:underline">
-                        {h.handover_no ?? "(belum bernomor)"}
-                      </Link>
+                      <span className="inline-flex flex-wrap items-center gap-1.5">
+                        <Link href={`/${h.id}`} className="font-medium text-brand-600 hover:underline">
+                          {h.handover_no ?? "(belum bernomor)"}
+                        </Link>
+                        <DivisionBadge code={divisions.code(h.division_id)} />
+                      </span>
                       {/* Ringkasan untuk layar kecil (kolom lain disembunyikan) */}
                       <p className="mt-0.5 text-xs text-slate-500 md:hidden">
                         <span className="sm:hidden">{formatDate(h.shift_date)} · </span>

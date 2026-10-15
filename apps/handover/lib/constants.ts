@@ -69,8 +69,55 @@ export type Incident = {
   root_cause: string | null;
   resolution: string | null;
   external_ticket: string | null;
+  /** null = umum (lintas divisi). */
+  division_id?: string | null;
+  category?: IncidentCategory;
+  security_type?: SecurityType | null;
+  mitre_technique?: string | null;
+  /** Satu IOC per baris. */
+  iocs?: string | null;
+  affected_assets?: string | null;
   created_at: string;
 };
+
+export type IncidentCategory = "jaringan" | "perangkat" | "listrik" | "aplikasi" | "keamanan" | "lainnya";
+
+export const INCIDENT_CATEGORIES: { value: IncidentCategory; label: string }[] = [
+  { value: "jaringan", label: "Jaringan" },
+  { value: "perangkat", label: "Perangkat" },
+  { value: "listrik", label: "Listrik" },
+  { value: "aplikasi", label: "Aplikasi" },
+  { value: "keamanan", label: "Keamanan" },
+  { value: "lainnya", label: "Lainnya" },
+];
+
+export const incidentCategoryLabel = (c: string | null | undefined) =>
+  INCIDENT_CATEGORIES.find((x) => x.value === c)?.label ?? c ?? "-";
+
+export type SecurityType =
+  | "malware"
+  | "phishing"
+  | "intrusion"
+  | "ddos"
+  | "data_leak"
+  | "unauthorized_access"
+  | "vulnerability"
+  | "policy_violation"
+  | "lainnya";
+
+export const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
+  { value: "malware", label: "Malware" },
+  { value: "phishing", label: "Phishing" },
+  { value: "intrusion", label: "Intrusi / peretasan" },
+  { value: "ddos", label: "DDoS" },
+  { value: "data_leak", label: "Kebocoran data" },
+  { value: "unauthorized_access", label: "Akses tidak sah" },
+  { value: "vulnerability", label: "Kerentanan" },
+  { value: "policy_violation", label: "Pelanggaran kebijakan" },
+  { value: "lainnya", label: "Lainnya" },
+];
+
+export const securityTypeLabel = (t: string | null | undefined) => SECURITY_TYPES.find((x) => x.value === t)?.label ?? t ?? "-";
 
 export type IncidentUpdate = {
   id: string;

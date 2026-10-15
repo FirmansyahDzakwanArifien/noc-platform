@@ -2,8 +2,40 @@
 
 import { revalidatePath } from "next/cache";
 import { actionContext, dbError, done, fail, req, str } from "@noc/supabase/actions";
-import { INCIDENT_STATUSES, isOneOf, PRIORITIES } from "@/lib/constants";
-import { wibToIso } from "@/lib/util";
+import { INCIDENT_CATEGORIES, INCIDENT_STATUSES, isOneOf, PRIORITIES, SECURITY_TYPES } from "@/lib/constants";
+import { isUuid, wibToIso } from "@/lib/util";
+
+/**
+ * Divisi, kategori & detail keamanan dari form. Detail keamanan dikosongkan bila kategori bukan
+ * "keamanan" dan jenis serangan tidak diisi (mis. field tersembunyi yang tidak relevan).
+ */
+function classification(formData: FormData, back: string) {
+  const divisionId = str(formData, "division_id");
+  if (divisionId !== null && !isUuid(divisionId)) fail(back, "Divisi tidak valid.");
+  const category = str(formData, "category") ?? "jaringan";
+  if (!isOneOf(INCIDENT_CATEGORIES, category)) fail(back, "Kategori tidak valid.");
+  const securityType = str(formData, "security_type");
+  if (securityType !== null && !isOneOf(SECURITY_TYPES, securityType)) fail(back, "Jenis serangan tidak valid.");
+  const keepSecurity = category === "keamanan" || securityType !== null;
+  return {
+    division_id: divisionId,
+    category,
+    security_type: keepSecurity ? securityType : null,
+    mitre_technique: keepSecurity ? str(formData, "mitre_technique") : null,
+    iocs: keepSecurity ? normalizeLines(str(formData, "iocs")) : null,
+    affected_assets: keepSecurity ? str(formData, "affected_assets") : null,
+  };
+}
+
+/** Rapikan daftar per baris: trim tiap baris & buang baris kosong. */
+function normalizeLines(v: string | null): string | null {
+  if (!v) return null;
+  const lines = v
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return lines.length ? lines.join("\n") : null;
+}
 
 export async function createIncident(formData: FormData) {
   const back = "/incident/baru";
@@ -13,6 +45,7 @@ export async function createIncident(formData: FormData) {
   const startedRaw = str(formData, "started_at");
   const startedAt = wibToIso(startedRaw);
   if (startedRaw && !startedAt) fail(back, "Waktu mulai tidak valid.");
+  const cls = classification(formData, back);
 
   const { data, error } = await supabase
     .from("incidents")
@@ -25,13 +58,20 @@ export async function createIncident(formData: FormData) {
       external_ticket: str(formData, "external_ticket"),
       reported_by: auth.userId,
       assigned_to: str(formData, "assigned_to"),
+      ...cls,
       ...(startedAt ? { started_at: startedAt } : {}),
     })
-    .select("id")
+    .select("id, division_id")
     .single();
   if (error || !data) fail(back, dbError(error));
+  const created = data as { id: string; division_id: string | null };
+  // Trigger DB mengisi divisi pembuat bila kosong; "Umum" dipilih eksplisit → kosongkan lagi.
+  if (cls.division_id === null && created.division_id !== null) {
+    const { error: divErr } = await supabase.from("incidents").update({ division_id: null }).eq("id", created.id);
+    if (divErr) fail(`/incident/${created.id}`, dbError(divErr));
+  }
   revalidatePath("/incident");
-  done(`/incident/${(data as { id: string }).id}`, "Incident dicatat. Tambahkan perkembangan penanganan di timeline.");
+  done(`/incident/${created.id}`, "Incident dicatat. Tambahkan perkembangan penanganan di timeline.");
 }
 
 /** Status baru → nilai resolved_at yang sesuai. */
@@ -78,10 +118,12 @@ export async function updateIncident(formData: FormData) {
   const { supabase } = await actionContext(back, "incident.manage");
   const severity = str(formData, "severity") ?? "medium";
   if (!isOneOf(PRIORITIES, severity)) fail(back, "Severity tidak valid.");
+  const cls = classification(formData, back);
 
   const { error } = await supabase
     .from("incidents")
     .update({
+      ...cls,
       severity,
       assigned_to: str(formData, "assigned_to"),
       affected_service: str(formData, "affected_service"),

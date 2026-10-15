@@ -21,10 +21,21 @@ import {
   SubmitButton,
   Textarea,
 } from "@noc/ui";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Trash2 } from "lucide-react";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { INCIDENT_STATUSES, PRIORITIES, SEVERITY_COLOR, SEVERITY_HINT, type Incident, type IncidentUpdate } from "@/lib/constants";
-import { loadProfiles, loadSites } from "@/lib/data";
+import { DivisionBadge } from "@/components/division-badge";
+import { DivisionCategoryFields, SecurityFields } from "@/components/incident-fields";
+import {
+  incidentCategoryLabel,
+  INCIDENT_STATUSES,
+  PRIORITIES,
+  securityTypeLabel,
+  SEVERITY_COLOR,
+  SEVERITY_HINT,
+  type Incident,
+  type IncidentUpdate,
+} from "@/lib/constants";
+import { loadDivisions, loadProfiles, loadSites } from "@/lib/data";
 import { isUuid } from "@/lib/util";
 import { addIncidentUpdate, deleteIncident, updateIncident } from "../actions";
 
@@ -66,7 +77,7 @@ export default async function IncidentDetailPage({
   if (!isUuid(id)) notFound();
 
   const supabase = await createClient();
-  const [{ data: row }, { data: updRows }, related, profiles, sites] = await Promise.all([
+  const [{ data: row }, { data: updRows }, related, profiles, sites, divisions] = await Promise.all([
     supabase.from("incidents").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("incident_updates")
@@ -84,6 +95,7 @@ export default async function IncidentDetailPage({
       : Promise.resolve({ data: [] }),
     loadProfiles(supabase),
     loadSites(supabase),
+    loadDivisions(supabase),
   ]);
   if (!row) notFound();
   const inc = row as Incident;
@@ -92,6 +104,12 @@ export default async function IncidentDetailPage({
   const canManage = auth.can("incident.manage");
   const done = inc.status === "resolved" || inc.status === "closed";
   const statusLabel = INCIDENT_STATUSES.find((s) => s.value === inc.status)?.label ?? inc.status;
+  const division = divisions.get(inc.division_id);
+  const iocList = (inc.iocs ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const hasSecurity = !!(inc.security_type || inc.mitre_technique || iocList.length || inc.affected_assets);
 
   return (
     <div className="space-y-6">
@@ -103,6 +121,7 @@ export default async function IncidentDetailPage({
           title={
             <span className="flex flex-wrap items-center gap-2">
               {inc.ticket_no ?? "Incident"} <StatusBadge status={inc.status} />
+              <DivisionBadge code={division?.code} />
             </span>
           }
           description={<span className="break-words text-base text-slate-700">{inc.title}</span>}
@@ -221,6 +240,8 @@ export default async function IncidentDetailPage({
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                <Info label="Divisi">{division ? `${division.code} · ${division.name}` : "Umum"}</Info>
+                <Info label="Kategori">{incidentCategoryLabel(inc.category)}</Info>
                 <Info label="Site">{inc.site_id ? sites.name(inc.site_id) : "Tidak spesifik"}</Info>
                 <Info label="Layanan terdampak">{inc.affected_service ?? "-"}</Info>
                 <Info label="Mulai terjadi">{formatDateTime(inc.started_at)}</Info>
@@ -246,6 +267,38 @@ export default async function IncidentDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {hasSecurity && (
+            <Card className="border-violet-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="size-4 text-violet-600" aria-hidden /> Detail keamanan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                  <Info label="Jenis serangan">{inc.security_type ? securityTypeLabel(inc.security_type) : "-"}</Info>
+                  <Info label="Teknik MITRE ATT&CK">
+                    {inc.mitre_technique ? <span className="font-mono text-xs">{inc.mitre_technique}</span> : "-"}
+                  </Info>
+                </div>
+                <Info label={`IOC${iocList.length ? ` (${iocList.length})` : ""}`}>
+                  {iocList.length ? (
+                    <pre className="mt-1 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-xs leading-relaxed text-slate-800 select-all">
+                      {iocList.join("\n")}
+                    </pre>
+                  ) : (
+                    "-"
+                  )}
+                </Info>
+                {inc.affected_assets && (
+                  <Info label="Aset terdampak">
+                    <span className="whitespace-pre-line">{inc.affected_assets}</span>
+                  </Info>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -268,6 +321,7 @@ export default async function IncidentDetailPage({
                       ))}
                     </Select>
                   </Field>
+                  <DivisionCategoryFields divisions={divisions.list} values={inc} />
                   <Field label="Severity" hint={SEVERITY_HINT[inc.severity]}>
                     <Select name="severity" defaultValue={inc.severity}>
                       {PRIORITIES.map((p) => (
@@ -289,6 +343,7 @@ export default async function IncidentDetailPage({
                   <Field label="Penyelesaian" hint={done ? undefined : "Tindakan yang memulihkan layanan."}>
                     <Textarea name="resolution" rows={3} defaultValue={inc.resolution ?? ""} />
                   </Field>
+                  <SecurityFields divisions={divisions.list} values={inc} compact />
                   <p className="text-xs text-slate-500">Status diubah lewat Timeline agar setiap perubahan tercatat.</p>
                   <div className="flex justify-end">
                     <SubmitButton variant="secondary">Simpan penanganan</SubmitButton>

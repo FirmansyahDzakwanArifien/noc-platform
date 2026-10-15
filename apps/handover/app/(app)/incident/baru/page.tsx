@@ -19,7 +19,8 @@ import {
 } from "@noc/ui";
 import { ArrowLeft } from "lucide-react";
 import { PRIORITIES, SEVERITY_HINT } from "@/lib/constants";
-import { loadProfiles, loadSites } from "@/lib/data";
+import { DivisionCategoryFields, SecurityFields } from "@/components/incident-fields";
+import { loadDivisions, loadMyDivision, loadProfiles, loadSites } from "@/lib/data";
 import { createIncident } from "../actions";
 
 export const metadata = { title: "Laporkan Incident" };
@@ -34,7 +35,13 @@ export default async function NewIncidentPage({
   if (!auth.can("incident.manage")) return <Forbidden />;
 
   const supabase = await createClient();
-  const [profiles, sites] = await Promise.all([loadProfiles(supabase), loadSites(supabase)]);
+  const [profiles, sites, divisions, myDivision] = await Promise.all([
+    loadProfiles(supabase),
+    loadSites(supabase),
+    loadDivisions(supabase),
+    loadMyDivision(supabase),
+  ]);
+  const defaults = { division_id: divisions.get(myDivision)?.id ?? null, category: "jaringan" as const };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -58,6 +65,7 @@ export default async function NewIncidentPage({
             <Field label="Judul" required className="sm:col-span-2" hint="Singkat dan spesifik: apa yang terganggu dan di mana.">
               <Input name="title" required placeholder="mis. Link uplink ISP A down di POP Surabaya" />
             </Field>
+            <DivisionCategoryFields divisions={divisions.list} values={defaults} />
             <Field label="Tingkat keparahan (severity)" required>
               <Select name="severity" defaultValue="medium" required>
                 {PRIORITIES.map((p) => (
@@ -86,6 +94,7 @@ export default async function NewIncidentPage({
             <Field label="Deskripsi" className="sm:col-span-2">
               <Textarea name="description" rows={3} placeholder="Gejala, alarm yang muncul, langkah awal yang sudah dilakukan." />
             </Field>
+            <SecurityFields divisions={divisions.list} values={defaults} />
           </CardContent>
         </Card>
 

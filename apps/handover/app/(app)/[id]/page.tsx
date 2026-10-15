@@ -27,8 +27,9 @@ import {
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CircleAlert, CornerDownRight, Plus, Trash2 } from "lucide-react";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { DivisionBadge } from "@/components/division-badge";
 import { CATEGORIES, ITEM_STATUSES, PRIORITIES, type Incident } from "@/lib/constants";
-import { loadProfiles, loadShifts, loadSites } from "@/lib/data";
+import { loadDivisions, loadProfiles, loadShifts, loadSites } from "@/lib/data";
 import { first, isUuid } from "@/lib/util";
 import {
   acknowledgeHandover,
@@ -71,7 +72,7 @@ export default async function HandoverDetailPage({
 
   const supabase = await createClient();
   // Semua query yang hanya butuh ID handover dijalankan paralel.
-  const [hRes, members, items, results, templates, incidents, profiles, shifts, sites] = await Promise.all([
+  const [hRes, members, items, results, templates, incidents, profiles, shifts, sites, divisions] = await Promise.all([
     supabase.from("handovers").select("*").eq("id", id).maybeSingle(),
     supabase.from("handover_members").select("user_id, side").eq("handover_id", id),
     supabase
@@ -84,7 +85,7 @@ export default async function HandoverDetailPage({
       .from("handover_checklist_results")
       .select("template_item_id, value, is_ok, note, checklist_template_items(template_id)")
       .eq("handover_id", id),
-    supabase.from("checklist_templates").select("id, name, site_id, is_active").eq("is_active", true).order("name"),
+    supabase.from("checklist_templates").select("id, name, site_id, division_id, is_active").eq("is_active", true).order("name"),
     auth.can("incident.view")
       ? supabase
           .from("incidents")
@@ -96,6 +97,7 @@ export default async function HandoverDetailPage({
     loadProfiles(supabase),
     loadShifts(supabase),
     loadSites(supabase),
+    loadDivisions(supabase),
   ]);
   if (!hRes.data) notFound();
   const h = hRes.data as Handover;
@@ -103,8 +105,12 @@ export default async function HandoverDetailPage({
   const memberRows = (members.data as Member[] | null) ?? [];
   const itemRows = (items.data as ItemRow[] | null) ?? [];
   const resultRows = (results.data as ResultRow[] | null) ?? [];
-  // Template aktif yang berlaku: umum + khusus site handover ini.
-  const templateRows = ((templates.data as ChecklistTemplate[] | null) ?? []).filter((t) => !t.site_id || t.site_id === h.site_id);
+  // Template aktif yang berlaku: umum + khusus site handover ini. Urutan: divisi handover ini →
+  // semua divisi → divisi lain (tetap bisa dipilih), sehingga template default = milik divisi sendiri.
+  const divisionRank = (t: ChecklistTemplate) => (t.division_id && t.division_id === h.division_id ? 0 : !t.division_id ? 1 : 2);
+  const templateRows = ((templates.data as ChecklistTemplate[] | null) ?? [])
+    .filter((t) => !t.site_id || t.site_id === h.site_id)
+    .sort((a, b) => divisionRank(a) - divisionRank(b));
   const openIncidents = (incidents.data as Pick<Incident, "id" | "ticket_no" | "title">[] | null) ?? [];
 
   const editable = h.status === "draft" || h.status === "returned";
@@ -138,7 +144,7 @@ export default async function HandoverDetailPage({
     const [itemData, extra] = await Promise.all([
       loadTplItems(pickedId),
       extraId
-        ? supabase.from("checklist_templates").select("id, name, site_id, is_active").eq("id", extraId).maybeSingle()
+        ? supabase.from("checklist_templates").select("id, name, site_id, division_id, is_active").eq("id", extraId).maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
     template ??= (extra.data as ChecklistTemplate | null) ?? (extraId ? undefined : templateRows[0]);
@@ -175,6 +181,7 @@ export default async function HandoverDetailPage({
           title={
             <span className="flex flex-wrap items-center gap-2">
               {h.handover_no ?? "Handover"} <StatusBadge status={h.status} />
+              <DivisionBadge code={divisions.code(h.division_id)} />
             </span>
           }
           description={
@@ -558,6 +565,7 @@ export default async function HandoverDetailPage({
               <AutoSubmitSelect name="template" defaultValue={template?.id} aria-label="Pilih template checklist" className="h-8 text-xs sm:w-56">
                 {tplOptions.map((t) => (
                   <option key={t.id} value={t.id}>
+                    {divisions.code(t.division_id) ? `[${divisions.code(t.division_id)}] ` : ""}
                     {t.name}
                     {t.site_id ? ` (${sites.name(t.site_id)})` : ""}
                   </option>

@@ -3,13 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { actionContext, bool, dbError, done, fail, num, req, str } from "@noc/supabase/actions";
 import { INPUT_TYPES } from "@/lib/constants";
+import { isUuid } from "@/lib/util";
+
+/** Divisi template dari form; kosong = semua divisi. */
+function divisionOf(formData: FormData, back: string): string | null {
+  const v = str(formData, "division_id");
+  if (v !== null && !isUuid(v)) fail(back, "Divisi tidak valid.");
+  return v;
+}
 
 export async function createTemplate(formData: FormData) {
   const back = "/checklist";
   const { supabase } = await actionContext(back, "master.manage");
   const { data, error } = await supabase
     .from("checklist_templates")
-    .insert({ name: req(formData, "name", back, "Nama template"), site_id: str(formData, "site_id"), is_active: true })
+    .insert({
+      name: req(formData, "name", back, "Nama template"),
+      site_id: str(formData, "site_id"),
+      division_id: divisionOf(formData, back),
+      is_active: true,
+    })
     .select("id")
     .single();
   if (error || !data) fail(back, dbError(error));
@@ -23,7 +36,11 @@ export async function updateTemplate(formData: FormData) {
   const { supabase } = await actionContext(back, "master.manage");
   const { error } = await supabase
     .from("checklist_templates")
-    .update({ name: req(formData, "name", back, "Nama template"), site_id: str(formData, "site_id") })
+    .update({
+      name: req(formData, "name", back, "Nama template"),
+      site_id: str(formData, "site_id"),
+      division_id: divisionOf(formData, back),
+    })
     .eq("id", id);
   if (error) fail(back, dbError(error));
   revalidatePath("/checklist");

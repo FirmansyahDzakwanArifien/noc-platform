@@ -73,7 +73,7 @@ export default async function NewHandoverPage({
             <Field label="Tanggal shift" required hint="Tanggal shift Anda dimulai (untuk shift malam: tanggal sebelum tengah malam).">
               <Input type="date" name="shift_date" defaultValue={guess.date} required />
             </Field>
-            <Field label="Site" hint="Pilih “Umum” jika handover berlaku untuk seluruh NOC.">
+            <Field label="Site" hint="Pilih “Umum” jika handover berlaku untuk seluruh ruang operasional.">
               <Select name="site_id" defaultValue="">
                 <option value="">Umum (semua site)</option>
                 {sites.active.map((s) => (

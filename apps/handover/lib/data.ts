@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@noc/supabase/server";
-import type { Shift, Site } from "@noc/supabase/types";
+import type { Division, Shift, Site } from "@noc/supabase/types";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -35,4 +35,22 @@ export async function loadShifts(supabase: Client) {
     get: (id: string | null | undefined) => (id ? map.get(id) : undefined),
     name: (id: string | null | undefined) => (id ? map.get(id)?.name ?? "-" : "-"),
   };
+}
+
+export async function loadDivisions(supabase: Client) {
+  const { data } = await supabase.from("divisions").select("id, code, name, sort_order").order("sort_order");
+  const list = (data as Division[] | null) ?? [];
+  const map = new Map(list.map((d) => [d.id, d]));
+  return {
+    list,
+    get: (id: string | null | undefined) => (id ? map.get(id) : undefined),
+    code: (id: string | null | undefined) => (id ? map.get(id)?.code ?? null : null),
+    byCode: (code: string | null | undefined) => list.find((d) => d.code.toLowerCase() === code?.toLowerCase()),
+  };
+}
+
+/** Divisi user yang sedang login (RPC my_division), atau null. */
+export async function loadMyDivision(supabase: Client): Promise<string | null> {
+  const { data } = await supabase.rpc("my_division");
+  return typeof data === "string" ? data : null;
 }
