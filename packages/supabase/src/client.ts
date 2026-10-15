@@ -9,3 +9,13 @@ export function createClient() {
     cookieOptions: { domain: cookieDomain() },
   });
 }
+
+/** Klien terpisah yang tidak membaca token dari URL otomatis (untuk halaman yang memprosesnya sendiri, mis. undangan). */
+export function createManualClient() {
+  const { url, key } = supabaseEnv();
+  return createBrowserClient(url, key, {
+    cookieOptions: { domain: cookieDomain() },
+    auth: { detectSessionInUrl: false },
+    isSingleton: false,
+  });
+}

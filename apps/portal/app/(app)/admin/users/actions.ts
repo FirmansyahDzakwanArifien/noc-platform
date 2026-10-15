@@ -60,3 +60,45 @@ export async function removeRole(formData: FormData) {
   revalidatePath("/admin/users");
   done(back, "Role dicabut.");
 }
+
+// ---------------------------------------------------------------------------
+// Undangan via email (edge function invite-user memakai service role)
+// ---------------------------------------------------------------------------
+const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
+async function callInvite(supabase: Awaited<ReturnType<typeof actionContext>>["supabase"], body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke<{ ok?: boolean; warning?: string; error?: string }>("invite-user", {
+    body: { ...body, redirect_to: `${PORTAL_URL}/undangan` },
+  });
+  if (error) {
+    // FunctionsHttpError: pesan ada di body respons.
+    const ctx = (error as { context?: Response }).context;
+    const payload = ctx ? await ctx.json().catch(() => null) : null;
+    return { error: (payload as { error?: string } | null)?.error ?? "Gagal menghubungi layanan undangan." };
+  }
+  return { warning: data?.warning };
+}
+
+export async function inviteUser(formData: FormData) {
+  const back = "/admin/users/undang";
+  const { supabase } = await actionContext(back, "user.manage");
+  const email = req(formData, "email", back, "Email").toLowerCase();
+  const res = await callInvite(supabase, {
+    email,
+    full_name: str(formData, "full_name"),
+    role_id: req(formData, "role_id", back, "Role"),
+    team_id: str(formData, "team_id"),
+  });
+  if (res.error) fail(back, res.error);
+  revalidatePath("/admin/users");
+  done("/admin/users?status=menunggu", res.warning ?? `Undangan terkirim ke ${email}.`);
+}
+
+export async function resendInvite(formData: FormData) {
+  const back = backOf(formData);
+  const { supabase } = await actionContext(back, "user.manage");
+  const email = req(formData, "email", back, "Email");
+  const res = await callInvite(supabase, { email, resend: true });
+  if (res.error) fail(back, res.error);
+  done(back, `Undangan dikirim ulang ke ${email}.`);
+}
