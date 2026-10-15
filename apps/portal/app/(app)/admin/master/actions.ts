@@ -26,6 +26,7 @@ function teamFields(formData: FormData, back: string) {
   return {
     name: req(formData, "name", back, "Nama tim"),
     description: str(formData, "description"),
+    managed_by_team_id: str(formData, "managed_by_team_id"),
   };
 }
 

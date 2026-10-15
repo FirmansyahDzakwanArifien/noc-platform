@@ -37,7 +37,7 @@ export type Site = {
   is_active: boolean;
 };
 
-export type Team = { id: string; name: string; description: string | null };
+export type Team = { id: string; name: string; description: string | null; managed_by_team_id: string | null };
 
 export type Vendor = {
   id: string;

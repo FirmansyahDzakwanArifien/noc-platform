@@ -71,6 +71,10 @@ export default async function PeriodEditorPage({ params, searchParams }: { param
   ]);
   const period = periodData as unknown as PeriodRow | null;
   if (!period) notFound();
+  if (!auth.can("schedule.manage_all")) {
+    const { data: allowed } = await supabase.rpc("can_manage_schedule", { p_team: period.team_id });
+    if (!allowed) return <Forbidden message="Periode ini milik tim lain. Anda hanya bisa mengelola jadwal tim Anda dan tim binaannya." />;
+  }
 
   const allShifts = (shiftData as ShiftLite[] | null) ?? [];
   // Administrator/Supervisor tidak masuk jadwal shift.

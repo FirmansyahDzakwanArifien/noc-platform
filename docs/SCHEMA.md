@@ -223,6 +223,8 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 | `attachments` | Metadata file di bucket Storage `attachments` (private). |
 | `comments` / `notifications` / `announcements` | Kolaborasi & informasi. |
 | `calendar_feeds` | Token rahasia feed iCal pribadi (`/ical/<token>.ics` di app Jadwal). Dibaca anon hanya lewat RPC `get_calendar_feed`. |
+| `review_criteria` | Aspek penilaian review bulanan (nilai 1–5). |
+| `performance_reviews` / `performance_review_scores` | Self review & peer review per bulan (`period_month` = tanggal 1). Ditulis hanya lewat RPC `submit_review` (bulan ini & bulan lalu). Peer review anonim bagi yang dinilai; nama penilai terlihat oleh `review.manage` dan lead tim pembina. Laporan: `monthly_report`, rekap: `review_overview`, tugas: `my_review_tasks`. |
 
 **Notifikasi otomatis** (trigger → `notifications`): approver izin kerja ditunjuk/keputusan approval, cuti/izin/tukar shift baru (ke approver & rekan), rekan setuju/menolak tukar shift, handover diajukan/diterima/dikembalikan, task ditugaskan, incident ditugaskan & incident kritis baru. Aksi oleh diri sendiri tidak dinotifikasi.
 
@@ -246,4 +248,9 @@ Alur permit: `draft → submitted → in_review → approved → active → comp
 - Generator jadwal otomatis (pola rotasi P-P-S-S-M-M-OFF-OFF) + deteksi bentrok dengan cuti
 - Export PDF handover & surat izin dengan QR code
 - Laporan KPI: MTTR, incident per site, kepatuhan checklist, rekap jam kerja dari jadwal
-- Scope role per tim/site (mis. lead hanya kelola jadwal timnya)
+
+## Lingkup tim
+
+- `teams.managed_by_team_id` = tim pembina (mis. NOC PKL dibina NOC Dedicated).
+- Jadwal: `schedule.manage_all` (admin, supervisor) mengelola semua periode; pemegang `schedule.manage` lainnya (lead) hanya periode tim sendiri + tim binaan (`can_manage_schedule`). Periode tanpa tim hanya untuk `schedule.manage_all`.
+- Peer review: sesama anggota satu tim (lead & staff, permission `review.submit`), plus lead tim pembina menilai anggota tim binaan.

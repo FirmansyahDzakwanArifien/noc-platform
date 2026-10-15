@@ -33,7 +33,7 @@ import { createPeriod } from "./actions";
 
 export const metadata = { title: "Kelola Jadwal" };
 
-type PeriodRow = Pick<SchedulePeriod, "id" | "name" | "start_date" | "end_date" | "status" | "published_at"> & {
+type PeriodRow = Pick<SchedulePeriod, "id" | "name" | "start_date" | "end_date" | "status" | "published_at" | "team_id"> & {
   teams: { name: string } | null;
   sites: { name: string } | null;
   shift_schedules: { count: number }[] | null;
@@ -46,17 +46,21 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
   if (!auth.can("schedule.manage")) return <Forbidden />;
 
   const supabase = await createClient();
-  const [{ data: periodData, error }, { data: teamData }, { data: siteData }] = await Promise.all([
+  const manageAll = auth.can("schedule.manage_all");
+  const [{ data: periodData, error }, { data: teamData }, { data: siteData }, { data: managedData }] = await Promise.all([
     supabase
       .from("schedule_periods")
-      .select("id, name, start_date, end_date, status, published_at, teams(name), sites(name), shift_schedules(count)")
+      .select("id, name, start_date, end_date, status, published_at, team_id, teams(name), sites(name), shift_schedules(count)")
       .order("start_date", { ascending: false })
       .limit(100),
     supabase.from("teams").select("id, name").order("name"),
     supabase.from("sites").select("id, code, name").eq("is_active", true).order("code"),
+    supabase.rpc("my_managed_teams"),
   ]);
-  const periods = (periodData as unknown as PeriodRow[] | null) ?? [];
-  const teams = (teamData as Pick<Team, "id" | "name">[] | null) ?? [];
+  // Lead hanya mengelola jadwal tim sendiri + tim binaan; admin/supervisor semua tim.
+  const managed = new Set((managedData as string[] | null) ?? []);
+  const periods = ((periodData as unknown as PeriodRow[] | null) ?? []).filter((p) => manageAll || (p.team_id && managed.has(p.team_id)));
+  const teams = ((teamData as Pick<Team, "id" | "name">[] | null) ?? []).filter((t) => manageAll || managed.has(t.id));
   const sites = (siteData as Pick<Site, "id" | "code" | "name">[] | null) ?? [];
 
   // Default form: bulan berikutnya
@@ -154,9 +158,17 @@ export default async function ManagePage({ searchParams }: { searchParams: SP })
             >
               <Input type="date" name="end_date" required defaultValue={defEnd} />
             </Field>
-            <Field label="Tim" hint="Anggota aktif tim ini otomatis muncul sebagai baris di editor. Kosongkan untuk semua pengguna aktif.">
-              <Select name="team_id" defaultValue="">
-                <option value="">Semua pengguna aktif</option>
+            <Field
+              label="Tim"
+              required={!manageAll}
+              hint={
+                manageAll
+                  ? "Anggota aktif tim ini otomatis muncul sebagai baris di editor. Kosongkan untuk semua pengguna aktif."
+                  : "Anda bisa membuat jadwal untuk tim Anda dan tim binaannya."
+              }
+            >
+              <Select name="team_id" defaultValue={manageAll ? "" : (teams[0]?.id ?? "")} required={!manageAll}>
+                {manageAll && <option value="">Semua pengguna aktif</option>}
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}

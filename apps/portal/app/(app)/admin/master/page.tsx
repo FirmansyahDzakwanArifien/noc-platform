@@ -277,12 +277,24 @@ function TeamsTab({ rows, back, caps, editId, people }: TabProps<Team> & { peopl
     <>
       {caps.manage && (
         <EditorCard title="Tim" table="teams" row={row} back={back}>
-          <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
+          <div className="grid gap-3 sm:grid-cols-[1fr_2fr_1fr]">
             <Field label="Nama tim" required>
               <Input name="name" required placeholder="NOC L1" defaultValue={row?.name} />
             </Field>
             <Field label="Deskripsi">
               <Input name="description" defaultValue={row?.description ?? ""} />
+            </Field>
+            <Field label="Tim pembina" hint="Lead tim pembina ikut mengelola jadwal & melihat review tim ini.">
+              <Select name="managed_by_team_id" defaultValue={row?.managed_by_team_id ?? ""}>
+                <option value="">Tidak ada</option>
+                {rows
+                  .filter((t) => t.id !== row?.id)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+              </Select>
             </Field>
           </div>
         </EditorCard>
@@ -305,6 +317,7 @@ function TeamsTab({ rows, back, caps, editId, people }: TabProps<Team> & { peopl
                     <p className="text-xs text-slate-500">
                       {t.description ? `${t.description} · ` : ""}
                       {members.length} anggota
+                      {t.managed_by_team_id && <> · dibina {rows.find((x) => x.id === t.managed_by_team_id)?.name}</>}
                     </p>
                   </div>
                   <RowActions caps={caps} table="teams" id={t.id} label={`tim ${t.name}`} back={back} />
